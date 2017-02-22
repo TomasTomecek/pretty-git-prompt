@@ -1,0 +1,7 @@
+[package]
+name = "git-stats"
+version = "0.0.1"
+authors = ["Tomas Tomecek <ttomecek@redhat.com>"]
+
+[dependencies]
+git2 = "0.6"
