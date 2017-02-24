@@ -19,6 +19,13 @@ fn get_branch_remote(reference: Reference) -> Oid {
     }
 }
 
+fn get_ref_to_oid(reference: Reference) -> Oid {
+    match reference.target() {
+        Some(v) => v,
+        None => panic!("Failed to get oid for reference."),
+    }
+}
+
 impl Program {
     fn get_head(&self) -> Reference {
         match self.repo.head() {
@@ -63,6 +70,25 @@ impl Program {
             Err(e) => panic!("failed to compute ahead/behind: {}", e)
         }
     }
+
+    fn get_upstream_branch_ahead_behind(&self) -> (usize, usize)  {
+        let res = self.repo.graph_ahead_behind(
+            self.get_current_branch_oid(),
+            get_ref_to_oid(self.find_upstream_repo_branch()),
+        );
+        match res {
+            Ok(r) => r,
+            Err(e) => panic!("failed to compute ahead/behind: {}", e)
+        }
+    }
+
+    fn find_upstream_repo_branch(&self) -> Reference {
+        let us_branch_name = format!("{}{}", "upstream/", self.get_current_branch_name());
+        match self.repo.find_branch(&us_branch_name, BranchType::Remote) {
+            Ok(u) => u.into_reference(),
+            Err(e) => panic!("failed to find upstream repo: {}", e),
+        }
+    }
 }
 
 
@@ -75,10 +101,6 @@ fn main() {
     println!("{}", program.get_current_branch_name());
     let (ahead, behind) = program.get_current_branch_ahead_behind();
     println!("A: {}, B: {}", ahead, behind);
-    // let current_branch_name = get_current_branch_name(repo);
-    // println!("{:?}", current_branch_name);
-    // let us = match repo.find_branch("origin/master", BranchType::Remote) {
-    //     Ok(us) => us,
-    //     Err(e) => panic!("failed to find origin/master: {}", e)
-    // };
+    let (ahead, behind) = program.get_upstream_branch_ahead_behind();
+    println!("U A: {}, B: {}", ahead, behind);
 }
