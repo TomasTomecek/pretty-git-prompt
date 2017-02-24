@@ -36,7 +36,7 @@ impl Program {
     }
 
     fn get_current_branch_name(&self) -> String {
-        match self.get_head().name() {
+        match self.get_head().shorthand() {
             Some(v) => v.to_string(),
             None => panic!("Failed to get name of head."),
         }
