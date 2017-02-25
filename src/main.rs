@@ -78,6 +78,7 @@ impl Program {
         );
         match res {
             Ok(r) => r,
+            // TODO: don't error, skip instead
             Err(e) => panic!("failed to compute ahead/behind: {}", e)
         }
     }
@@ -86,6 +87,7 @@ impl Program {
         let us_branch_name = format!("{}{}", "upstream/", self.get_current_branch_name());
         match self.repo.find_branch(&us_branch_name, BranchType::Remote) {
             Ok(u) => u.into_reference(),
+            // TODO: don't error, skip instead
             Err(e) => panic!("failed to find upstream repo: {}", e),
         }
     }
@@ -101,6 +103,7 @@ fn main() {
     println!("{}", program.get_current_branch_name());
     let (ahead, behind) = program.get_current_branch_ahead_behind();
     println!("A: {}, B: {}", ahead, behind);
-    let (ahead, behind) = program.get_upstream_branch_ahead_behind();
-    println!("U A: {}, B: {}", ahead, behind);
+    // let (ahead, behind) = program.get_upstream_branch_ahead_behind();
+    // TODO: skip if None
+    // println!("U A: {}, B: {}", ahead, behind);
 }
