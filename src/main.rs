@@ -1,6 +1,8 @@
 extern crate git2;
 
-use git2::{Repository,Branch,BranchType,Oid,Reference};
+use git2::{Repository,Branch,BranchType,Oid,Reference,StatusShow};
+use git2::{StatusOptions,Statuses,Status};
+use git2::{STATUS_INDEX_MODIFIED,STATUS_WT_MODIFIED};
 
 
 struct Program {
@@ -91,6 +93,16 @@ impl Program {
             Err(e) => panic!("failed to find upstream repo: {}", e),
         }
     }
+
+    fn get_status(&self) -> Statuses {
+        let mut so = StatusOptions::new();
+        let mut opts = so.show(StatusShow::IndexAndWorkdir);
+        let statuses = match self.repo.statuses(Some(&mut opts)) {
+            Ok(s) => s,
+            Err(e) => panic!("failed to get statuses: {}", e),
+        };
+        statuses
+    }
 }
 
 
@@ -106,4 +118,14 @@ fn main() {
     // let (ahead, behind) = program.get_upstream_branch_ahead_behind();
     // TODO: skip if None
     // println!("U A: {}, B: {}", ahead, behind);
+    let statuses = program.get_status();
+    for s in statuses.iter() {
+        println!("{}", s.path().unwrap());
+        if s.status().contains(STATUS_INDEX_MODIFIED) {
+            println!("M");
+        }
+        if s.status().contains(STATUS_WT_MODIFIED) {
+            println!("WM");
+        }
+    }
 }
