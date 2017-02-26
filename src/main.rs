@@ -2,7 +2,8 @@ extern crate git2;
 
 use git2::{Repository,Branch,BranchType,Oid,Reference,StatusShow};
 use git2::{StatusOptions,Statuses,Status};
-use git2::{STATUS_INDEX_MODIFIED,STATUS_WT_MODIFIED};
+use git2::{STATUS_WT_MODIFIED,STATUS_WT_DELETED,STATUS_WT_NEW,STATUS_WT_TYPECHANGE,STATUS_WT_RENAMED};
+use git2::{STATUS_INDEX_MODIFIED,STATUS_INDEX_DELETED,STATUS_INDEX_NEW,STATUS_INDEX_TYPECHANGE,STATUS_INDEX_RENAMED};
 
 
 struct Program {
@@ -97,6 +98,7 @@ impl Program {
     fn get_status(&self) -> Statuses {
         let mut so = StatusOptions::new();
         let mut opts = so.show(StatusShow::IndexAndWorkdir);
+        opts.include_untracked(true);
         let statuses = match self.repo.statuses(Some(&mut opts)) {
             Ok(s) => s,
             Err(e) => panic!("failed to get statuses: {}", e),
@@ -120,12 +122,20 @@ fn main() {
     // println!("U A: {}, B: {}", ahead, behind);
     let statuses = program.get_status();
     for s in statuses.iter() {
+        let file_status = s.status();
         println!("{}", s.path().unwrap());
-        if s.status().contains(STATUS_INDEX_MODIFIED) {
-            println!("M");
-        }
-        if s.status().contains(STATUS_WT_MODIFIED) {
-            println!("WM");
-        }
+        if file_status.intersects(
+            STATUS_WT_MODIFIED | STATUS_WT_DELETED | STATUS_WT_TYPECHANGE | STATUS_WT_RENAMED
+        ) {
+            println!("changes");
+        };
+        if file_status.contains(STATUS_WT_NEW) {
+            println!("new files");
+        };
+        if file_status.intersects(
+            STATUS_INDEX_MODIFIED | STATUS_INDEX_DELETED | STATUS_INDEX_TYPECHANGE | STATUS_INDEX_RENAMED | STATUS_INDEX_NEW
+        ) {
+            println!("index update");
+        };
     }
 }
