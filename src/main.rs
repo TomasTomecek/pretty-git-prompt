@@ -1,7 +1,7 @@
 extern crate git2;
 
 use git2::{Repository,Branch,BranchType,Oid,Reference,StatusShow};
-use git2::{StatusOptions,Statuses,Status};
+use git2::{StatusOptions,Statuses,Status,RepositoryState};
 use git2::{STATUS_WT_MODIFIED,STATUS_WT_DELETED,STATUS_WT_NEW,STATUS_WT_TYPECHANGE,STATUS_WT_RENAMED};
 use git2::{STATUS_INDEX_MODIFIED,STATUS_INDEX_DELETED,STATUS_INDEX_NEW,STATUS_INDEX_TYPECHANGE,STATUS_INDEX_RENAMED};
 
@@ -105,6 +105,10 @@ impl Program {
         };
         statuses
     }
+
+    fn get_repository_state(&self) -> RepositoryState {
+        self.repo.state()
+    }
 }
 
 
@@ -138,4 +142,5 @@ fn main() {
             println!("index update");
         };
     }
+    println!("{:?}", program.get_repository_state());
 }
