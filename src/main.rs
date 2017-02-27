@@ -1,3 +1,9 @@
+// TODO:
+//  * remove every panic!() -- this is meant for prompt
+//  * add option to debug: print all errors
+//  * create function to display everything
+//  * colors
+
 extern crate git2;
 
 use git2::Error;
