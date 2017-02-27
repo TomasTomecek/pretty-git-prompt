@@ -1,5 +1,6 @@
 extern crate git2;
 
+use git2::Error;
 use git2::{Repository,Branch,BranchType,Oid,Reference,StatusShow};
 use git2::{StatusOptions,Statuses,Status,RepositoryState};
 use git2::{STATUS_WT_MODIFIED,STATUS_WT_DELETED,STATUS_WT_NEW,STATUS_WT_TYPECHANGE,STATUS_WT_RENAMED};
@@ -10,16 +11,13 @@ struct Program {
     repo: Repository,
 }
 
-fn get_branch_remote(reference: Reference) -> Oid {
+fn get_branch_remote(reference: Reference) -> Option<Oid> {
     let b = Branch::wrap(reference);
     let upstream = match b.upstream() {
         Ok(u) => u,
-        Err(e) => panic!("Failed to get upstream: {}.", e)
+        Err(_) => return None,
     };
-    match upstream.get().target() {
-        Some(o) => o,
-        None => panic!("Failed to get oid of branch.")
-    }
+    upstream.get().target()
 }
 
 fn get_ref_to_oid(reference: Reference) -> Oid {
@@ -59,40 +57,43 @@ impl Program {
     //     String::from(upstream.name().ok().unwrap().unwrap())
     // }
 
-    fn get_current_branch_remote_oid(&self) -> Oid {
+    fn get_current_branch_remote_oid(&self) -> Option<Oid> {
         get_branch_remote(self.get_head())
     }
 
-    fn get_current_branch_ahead_behind(&self) -> (usize, usize)  {
+    fn get_current_branch_ahead_behind(&self) -> Option<(usize, usize)> {
+        let oid = match self.get_current_branch_remote_oid() {
+            Some(r) => r,
+            None => return None
+        };
         let res = self.repo.graph_ahead_behind(
             self.get_current_branch_oid(),
-            self.get_current_branch_remote_oid(),
+            oid
         );
         match res {
-            Ok(r) => r,
-            Err(e) => panic!("failed to compute ahead/behind: {}", e)
+            Ok(r) => Some(r),
+            Err(_) => None
         }
     }
 
-    fn get_upstream_branch_ahead_behind(&self) -> (usize, usize)  {
-        let res = self.repo.graph_ahead_behind(
-            self.get_current_branch_oid(),
-            get_ref_to_oid(self.find_upstream_repo_branch()),
-        );
-        match res {
-            Ok(r) => r,
-            // TODO: don't error, skip instead
-            Err(e) => panic!("failed to compute ahead/behind: {}", e)
-        }
-    }
-
-    fn find_upstream_repo_branch(&self) -> Reference {
-        let us_branch_name = format!("{}{}", "upstream/", self.get_current_branch_name());
-        match self.repo.find_branch(&us_branch_name, BranchType::Remote) {
+    fn get_upstream_branch_ahead_behind(&self) -> Option<(usize, usize)>  {
+        let upstream_reference = match self.find_upstream_repo_branch() {
             Ok(u) => u.into_reference(),
-            // TODO: don't error, skip instead
-            Err(e) => panic!("failed to find upstream repo: {}", e),
+            Err(_) => return None,
+        };
+        let res = self.repo.graph_ahead_behind(
+            self.get_current_branch_oid(),
+            get_ref_to_oid(upstream_reference),
+        );
+        match res {
+            Ok(r) => Some(r),
+            Err(_) => None
         }
+    }
+
+    fn find_upstream_repo_branch(&self) -> Result<Branch, Error> {
+        let us_branch_name = format!("{}{}", "upstream/", self.get_current_branch_name());
+        self.repo.find_branch(&us_branch_name, BranchType::Remote)
     }
 
     fn get_status(&self) -> Statuses {
@@ -119,11 +120,17 @@ fn main() {
     };
     let program = Program{ repo: repo };
     println!("{}", program.get_current_branch_name());
-    let (ahead, behind) = program.get_current_branch_ahead_behind();
-    println!("A: {}, B: {}", ahead, behind);
-    // let (ahead, behind) = program.get_upstream_branch_ahead_behind();
-    // TODO: skip if None
-    // println!("U A: {}, B: {}", ahead, behind);
+
+    match program.get_current_branch_ahead_behind() {
+        Some((ahead, behind)) => println!("A: {}, B: {}", ahead, behind),
+        None => {}
+    }
+
+    match program.get_upstream_branch_ahead_behind() {
+        Some((ahead, behind)) => println!("U A: {}, B: {}", ahead, behind),
+        None => {}
+    }
+
     let statuses = program.get_status();
     for s in statuses.iter() {
         let file_status = s.status();
