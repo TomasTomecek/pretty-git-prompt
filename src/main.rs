@@ -6,6 +6,8 @@
 
 extern crate git2;
 
+use std::io::{self, Write};
+
 use git2::Error;
 use git2::{Repository,Branch,BranchType,Oid,Reference,StatusShow};
 use git2::{StatusOptions,Statuses,Status,RepositoryState};
@@ -116,44 +118,54 @@ impl Program {
     fn get_repository_state(&self) -> RepositoryState {
         self.repo.state()
     }
+
+    fn run(&self) {
+        // TODO: print short hash if not on branch
+        print!("{}|", self.get_current_branch_name());
+
+        match self.get_current_branch_ahead_behind() {
+            // FIXME: cover case behind && ahead
+            Some((_, behind)) if behind > 0 => print!("-{}", behind),
+            Some((ahead, _)) if ahead > 0 => print!("+{}", ahead),
+            Some(_) => {}
+            None => {}
+        }
+
+        match self.get_upstream_branch_ahead_behind() {
+            Some((ahead, behind)) => print!("U+{}-{}|", ahead, behind),
+            None => {}
+        }
+
+        // let statuses = self.get_status();
+        // for s in statuses.iter() {
+        //     let file_status = s.status();
+        //     println!("{}", s.path().unwrap());
+        //     if file_status.intersects(
+        //         STATUS_WT_MODIFIED | STATUS_WT_DELETED | STATUS_WT_TYPECHANGE | STATUS_WT_RENAMED
+        //     ) {
+        //         println!("changes");
+        //     };
+        //     if file_status.contains(STATUS_WT_NEW) {
+        //         println!("new files");
+        //     };
+        //     if file_status.intersects(
+        //         STATUS_INDEX_MODIFIED | STATUS_INDEX_DELETED | STATUS_INDEX_TYPECHANGE | STATUS_INDEX_RENAMED | STATUS_INDEX_NEW
+        //     ) {
+        //         println!("index update");
+        //     };
+        // }
+        // println!("{:?}", program.get_repository_state());
+
+        print!("\n");
+    }
 }
 
 
 fn main() {
     let repo = match Repository::open(".") {
         Ok(repo) => repo,
-        Err(e) => panic!("failed to open: {}", e),
+        Err(_) => return (),
     };
     let program = Program{ repo: repo };
-    println!("{}", program.get_current_branch_name());
-
-    match program.get_current_branch_ahead_behind() {
-        Some((ahead, behind)) => println!("A: {}, B: {}", ahead, behind),
-        None => {}
-    }
-
-    match program.get_upstream_branch_ahead_behind() {
-        Some((ahead, behind)) => println!("U A: {}, B: {}", ahead, behind),
-        None => {}
-    }
-
-    let statuses = program.get_status();
-    for s in statuses.iter() {
-        let file_status = s.status();
-        println!("{}", s.path().unwrap());
-        if file_status.intersects(
-            STATUS_WT_MODIFIED | STATUS_WT_DELETED | STATUS_WT_TYPECHANGE | STATUS_WT_RENAMED
-        ) {
-            println!("changes");
-        };
-        if file_status.contains(STATUS_WT_NEW) {
-            println!("new files");
-        };
-        if file_status.intersects(
-            STATUS_INDEX_MODIFIED | STATUS_INDEX_DELETED | STATUS_INDEX_TYPECHANGE | STATUS_INDEX_RENAMED | STATUS_INDEX_NEW
-        ) {
-            println!("index update");
-        };
-    }
-    println!("{:?}", program.get_repository_state());
+    program.run();
 }
