@@ -66,13 +66,6 @@ impl Program {
         }
     }
 
-    // fn get_current_branch_remote(&self) -> String {
-    //     let oid = self.get_current_branch_oid();
-    //     let b = Branch::wrap(oid);
-    //     let upstream = b.upstream().ok().unwrap();
-    //     String::from(upstream.name().ok().unwrap().unwrap())
-    // }
-
     fn get_current_branch_remote_oid(&self) -> Option<Oid> {
         match self.get_head() {
             Some(r) => get_branch_remote(r),
