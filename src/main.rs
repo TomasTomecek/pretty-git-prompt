@@ -1,12 +1,13 @@
 // TODO:
 //  * add option to debug: print all errors
-//  * show file status
 //  * show repo state
 //  * colors
 
 extern crate git2;
 
 use std::io::{self, Write};
+
+use std::collections::HashMap;
 
 use git2::Error;
 use git2::{Repository,Branch,BranchType,Oid,Reference,StatusShow};
@@ -124,15 +125,45 @@ impl Program {
         let mut so = StatusOptions::new();
         let mut opts = so.show(StatusShow::IndexAndWorkdir);
         opts.include_untracked(true);
-        let statuses = match self.repo.statuses(Some(&mut opts)) {
+        match self.repo.statuses(Some(&mut opts)) {
             Ok(s) => Some(s),
             Err(e) => None,
-        };
-        statuses
+        }
     }
 
     fn get_repository_state(&self) -> RepositoryState {
         self.repo.state()
+    }
+
+    fn get_file_status(&self) -> Option<HashMap<&str, u32>> {
+        let mut d = HashMap::new();
+
+        let changed = STATUS_WT_MODIFIED | STATUS_WT_DELETED | STATUS_WT_TYPECHANGE | STATUS_WT_RENAMED;
+        let staged = STATUS_INDEX_MODIFIED | STATUS_INDEX_DELETED | STATUS_INDEX_TYPECHANGE | STATUS_INDEX_RENAMED | STATUS_INDEX_NEW;
+
+        let statuses = match self.get_status() {
+            Some(x) => x,
+            None => return None,
+        };
+
+        for s in statuses.iter() {
+            let file_status = s.status();
+            // println!("{}", s.path().unwrap());
+
+            if file_status.intersects(changed) {
+                let counter = d.entry("U").or_insert(0);
+                *counter += 1;
+            };
+            if file_status.contains(STATUS_WT_NEW) {
+                let counter = d.entry("N").or_insert(0);
+                *counter += 1;
+            };
+            if file_status.intersects(staged) {
+                let counter = d.entry("A").or_insert(0);
+                *counter += 1;
+            };
+        }
+        Some(d)
     }
 
     fn run(&self) {
@@ -151,24 +182,17 @@ impl Program {
             None => {}
         }
 
-        // let statuses = self.get_status();
-        // for s in statuses.iter() {
-        //     let file_status = s.status();
-        //     println!("{}", s.path().unwrap());
-        //     if file_status.intersects(
-        //         STATUS_WT_MODIFIED | STATUS_WT_DELETED | STATUS_WT_TYPECHANGE | STATUS_WT_RENAMED
-        //     ) {
-        //         println!("changes");
-        //     };
-        //     if file_status.contains(STATUS_WT_NEW) {
-        //         println!("new files");
-        //     };
-        //     if file_status.intersects(
-        //         STATUS_INDEX_MODIFIED | STATUS_INDEX_DELETED | STATUS_INDEX_TYPECHANGE | STATUS_INDEX_RENAMED | STATUS_INDEX_NEW
-        //     ) {
-        //         println!("index update");
-        //     };
-        // }
+        let statuses = match self.get_file_status() {
+            Some(s) => {
+                for (k, v) in s {
+                    if v > 0 {
+                        print!("{}{}", k, v);
+                    }
+                }
+            },
+            None => {}
+        };
+
         // println!("{:?}", program.get_repository_state());
 
         print!("\n");
