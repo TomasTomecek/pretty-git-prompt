@@ -5,13 +5,11 @@
 
 extern crate git2;
 
-use std::io::{self, Write};
-
 use std::collections::HashMap;
 
 use git2::Error;
 use git2::{Repository,Branch,BranchType,Oid,Reference,StatusShow};
-use git2::{StatusOptions,Statuses,Status,RepositoryState};
+use git2::{StatusOptions,Statuses,RepositoryState};
 use git2::{STATUS_WT_MODIFIED,STATUS_WT_DELETED,STATUS_WT_NEW,STATUS_WT_TYPECHANGE,STATUS_WT_RENAMED};
 use git2::{STATUS_INDEX_MODIFIED,STATUS_INDEX_DELETED,STATUS_INDEX_NEW,STATUS_INDEX_TYPECHANGE,STATUS_INDEX_RENAMED};
 
@@ -33,7 +31,7 @@ impl Program {
     fn get_head(&self) -> Option<Reference> {
         match self.repo.head() {
             Ok(head) => Some(head),
-            Err(e) => None,
+            Err(_) => None,
         }
     }
 
@@ -120,12 +118,26 @@ impl Program {
         opts.include_untracked(true);
         match self.repo.statuses(Some(&mut opts)) {
             Ok(s) => Some(s),
-            Err(e) => None,
+            Err(_) => None,
         }
     }
 
-    fn get_repository_state(&self) -> RepositoryState {
-        self.repo.state()
+    fn get_repository_state(&self) -> String {
+        let state = self.repo.state();
+        match state {
+            RepositoryState::Clean => String::from(""),
+            RepositoryState::Merge => String::from("merge"),
+            RepositoryState::Revert => String::from("revert"),
+            RepositoryState::RevertSequence => String::from("revert"),
+            RepositoryState::CherryPick => String::from("cherry-pick"),
+            RepositoryState::CherryPickSequence => String::from("cherry-pick"),
+            RepositoryState::Bisect => String::from("bisect"),
+            RepositoryState::Rebase => String::from("rebase"),
+            RepositoryState::RebaseInteractive => String::from("rebase"),
+            RepositoryState::RebaseMerge => String::from("rebase"),
+            RepositoryState::ApplyMailbox => String::from("apply"),
+            RepositoryState::ApplyMailboxOrRebase => String::from("apply"),
+        }
     }
 
     fn get_file_status(&self) -> Option<HashMap<&str, u32>> {
@@ -175,7 +187,7 @@ impl Program {
             None => {}
         }
 
-        let statuses = match self.get_file_status() {
+        match self.get_file_status() {
             Some(s) => {
                 for (k, v) in s {
                     if v > 0 {
@@ -186,7 +198,7 @@ impl Program {
             None => {}
         };
 
-        // println!("{:?}", program.get_repository_state());
+        print!("{}", self.get_repository_state());
 
         print!("\n");
     }
