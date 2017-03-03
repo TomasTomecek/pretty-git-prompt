@@ -1,7 +1,7 @@
 // TODO:
-//  * remove every panic!() -- this is meant for prompt
 //  * add option to debug: print all errors
-//  * create function to display everything
+//  * show file status
+//  * show repo state
 //  * colors
 
 extern crate git2;
@@ -28,33 +28,40 @@ fn get_branch_remote(reference: Reference) -> Option<Oid> {
     upstream.get().target()
 }
 
-fn get_ref_to_oid(reference: Reference) -> Oid {
-    match reference.target() {
-        Some(v) => v,
-        None => panic!("Failed to get oid for reference."),
-    }
-}
-
 impl Program {
-    fn get_head(&self) -> Reference {
+    fn get_head(&self) -> Option<Reference> {
         match self.repo.head() {
-            Ok(head) => head,
-            Err(e) => panic!("Failed to get head: {}.", e)
+            Ok(head) => Some(head),
+            Err(e) => None,
         }
     }
 
-    fn get_current_branch_oid(&self) -> Oid {
+    fn get_current_branch_oid(&self) -> Option<Oid> {
         let head = self.get_head();
-        match head.target() {
-            Some(v) => v,
-            None => panic!("Failed to get reference to head."),
+        match head {
+            Some(v) => v.target(),
+            None => None,
         }
     }
 
     fn get_current_branch_name(&self) -> String {
-        match self.get_head().shorthand() {
-            Some(v) => v.to_string(),
-            None => panic!("Failed to get name of head."),
+        let blank = String::from("");
+        let h = match self.get_head() {
+            Some(v) => v,
+            None => return blank,
+        };
+        if h.is_branch() {
+            match h.shorthand() {
+                Some(v) => v.to_string(),
+                None => blank,
+            }
+        } else {
+            let hash = match h.target() {
+                Some(v) => v.to_string(),
+                None => blank,
+            };
+            let (s, _) = hash.split_at(7);
+            s.to_string()
         }
     }
 
@@ -66,18 +73,22 @@ impl Program {
     // }
 
     fn get_current_branch_remote_oid(&self) -> Option<Oid> {
-        get_branch_remote(self.get_head())
+        match self.get_head() {
+            Some(r) => get_branch_remote(r),
+            None => None
+        }
     }
 
     fn get_current_branch_ahead_behind(&self) -> Option<(usize, usize)> {
-        let oid = match self.get_current_branch_remote_oid() {
+        let rm_oid = match self.get_current_branch_remote_oid() {
             Some(r) => r,
             None => return None
         };
-        let res = self.repo.graph_ahead_behind(
-            self.get_current_branch_oid(),
-            oid
-        );
+        let oid = match self.get_current_branch_oid() {
+            Some(r) => r,
+            None => return None
+        };
+        let res = self.repo.graph_ahead_behind(oid, rm_oid);
         match res {
             Ok(r) => Some(r),
             Err(_) => None
@@ -89,10 +100,15 @@ impl Program {
             Ok(u) => u.into_reference(),
             Err(_) => return None,
         };
-        let res = self.repo.graph_ahead_behind(
-            self.get_current_branch_oid(),
-            get_ref_to_oid(upstream_reference),
-        );
+        let upstream_reference_oid = match upstream_reference.target() {
+            Some(u) => u,
+            None => return None,
+        };
+        let oid = match self.get_current_branch_oid() {
+            Some(r) => r,
+            None => return None
+        };
+        let res = self.repo.graph_ahead_behind(oid, upstream_reference_oid);
         match res {
             Ok(r) => Some(r),
             Err(_) => None
@@ -104,13 +120,13 @@ impl Program {
         self.repo.find_branch(&us_branch_name, BranchType::Remote)
     }
 
-    fn get_status(&self) -> Statuses {
+    fn get_status(&self) -> Option<Statuses> {
         let mut so = StatusOptions::new();
         let mut opts = so.show(StatusShow::IndexAndWorkdir);
         opts.include_untracked(true);
         let statuses = match self.repo.statuses(Some(&mut opts)) {
-            Ok(s) => s,
-            Err(e) => panic!("failed to get statuses: {}", e),
+            Ok(s) => Some(s),
+            Err(e) => None,
         };
         statuses
     }
@@ -120,7 +136,6 @@ impl Program {
     }
 
     fn run(&self) {
-        // TODO: print short hash if not on branch
         print!("{}|", self.get_current_branch_name());
 
         match self.get_current_branch_ahead_behind() {
