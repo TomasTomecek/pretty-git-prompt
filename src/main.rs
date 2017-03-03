@@ -7,11 +7,7 @@ extern crate git2;
 
 use std::collections::HashMap;
 
-use git2::Error;
-use git2::{Repository,Branch,BranchType,Oid,Reference,StatusShow};
-use git2::{StatusOptions,Statuses,RepositoryState};
-use git2::{STATUS_WT_MODIFIED,STATUS_WT_DELETED,STATUS_WT_NEW,STATUS_WT_TYPECHANGE,STATUS_WT_RENAMED};
-use git2::{STATUS_INDEX_MODIFIED,STATUS_INDEX_DELETED,STATUS_INDEX_NEW,STATUS_INDEX_TYPECHANGE,STATUS_INDEX_RENAMED};
+use git2::*;
 
 
 struct Program {
@@ -165,6 +161,10 @@ impl Program {
             };
             if file_status.intersects(staged) {
                 let counter = d.entry("A").or_insert(0);
+                *counter += 1;
+            };
+            if file_status.intersects(STATUS_CONFLICTED) {
+                let counter = d.entry("C").or_insert(0);
                 *counter += 1;
             };
         }
