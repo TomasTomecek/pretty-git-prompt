@@ -152,19 +152,19 @@ impl Program {
             // println!("{}", s.path().unwrap());
 
             if file_status.intersects(changed) {
-                let counter = d.entry("U").or_insert(0);
+                let counter = d.entry("■").or_insert(0);
                 *counter += 1;
             };
             if file_status.contains(STATUS_WT_NEW) {
-                let counter = d.entry("N").or_insert(0);
+                let counter = d.entry("✚").or_insert(0);
                 *counter += 1;
             };
             if file_status.intersects(staged) {
-                let counter = d.entry("A").or_insert(0);
+                let counter = d.entry("●").or_insert(0);
                 *counter += 1;
             };
             if file_status.intersects(STATUS_CONFLICTED) {
-                let counter = d.entry("C").or_insert(0);
+                let counter = d.entry("✖").or_insert(0);
                 *counter += 1;
             };
         }
@@ -172,35 +172,49 @@ impl Program {
     }
 
     fn run(&self) {
-        print!("{}|", self.get_current_branch_name());
+        let mut out = Vec::new();
 
-        match self.get_current_branch_ahead_behind() {
-            // FIXME: cover case behind && ahead
-            Some((_, behind)) if behind > 0 => print!("-{}", behind),
-            Some((ahead, _)) if ahead > 0 => print!("+{}", ahead),
-            Some(_) => {}
-            None => {}
+        let repo_state = self.get_repository_state();
+        if repo_state.len() > 0 {
+            out.push(repo_state);
         }
 
-        match self.get_upstream_branch_ahead_behind() {
-            Some((ahead, behind)) => print!("U+{}-{}|", ahead, behind),
-            None => {}
+        // master↑3↓4
+        let mut local = self.get_current_branch_name().clone();
+        let (ahead, behind) = match self.get_current_branch_ahead_behind() {
+            Some(x) => x,
+            None => (0, 0),
+        };
+        if ahead > 0 { local += &format!("↑{}", ahead); }
+        if behind > 0 { local += &format!("↓{}", behind); }
+        out.push(local);
+
+        // upstream↑2↓1
+        let (ahead, behind) = match self.get_upstream_branch_ahead_behind() {
+            Some(x) => x,
+            None => (0, 0),
+        };
+        if ahead > 0 || behind > 0 {
+            let mut local = String::from("u");
+            if ahead > 0 { local += &format!("↑{}", ahead); }
+            if behind > 0 { local += &format!("↓{}", behind); }
+            out.push(local);
         }
 
         match self.get_file_status() {
             Some(s) => {
+                let mut o = String::from("");
                 for (k, v) in s {
                     if v > 0 {
-                        print!("{}{}", k, v);
+                        o += &format!("{}{}", k, v);
                     }
                 }
+                out.push(o);
             },
             None => {}
         };
 
-        print!("{}", self.get_repository_state());
-
-        print!("\n");
+        println!("{}", out.join("|"));
     }
 }
 
