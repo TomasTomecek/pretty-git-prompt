@@ -202,17 +202,20 @@ impl Program {
 
         match self.get_file_status() {
             Some(s) => {
-                let mut o = String::from("");
-                for (k, v) in s {
-                    if v > 0 {
-                        o += &format!("{}{}", k, v);
+                if s.len() > 0 {
+                    let mut o = String::from("");
+                    for (k, v) in s {
+                        if v > 0 {
+                            o += &format!("{}{}", k, v);
+                        }
                     }
+                    out.push(o);
                 }
-                out.push(o);
             },
             None => {}
         };
 
+        // println!("{}", out.len());
         println!("{}", out.join("|"));
     }
 }
