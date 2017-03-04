@@ -1,6 +1,5 @@
 // TODO:
 //  * add option to debug: print all errors
-//  * show repo state
 //  * colors
 
 extern crate git2;
