@@ -22,7 +22,6 @@ RUN dnf install -y openssl-devel cmake make file
 
 # RUN cargo install clippy
 
-
 COPY . /app
 WORKDIR /app
 
