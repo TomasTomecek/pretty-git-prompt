@@ -26,7 +26,12 @@ impl Program {
     fn get_head(&self) -> Option<Reference> {
         match self.repo.head() {
             Ok(head) => Some(head),
-            Err(_) => None,
+            Err(_) => {
+                match self.repo.find_reference("HEAD") {
+                    Ok(x) => Some(x),
+                    Err(_) => None,
+                }
+            },
         }
     }
 
@@ -41,21 +46,42 @@ impl Program {
     fn get_current_branch_name(&self) -> String {
         let blank = String::from("");
         let h = match self.get_head() {
-            Some(v) => v,
+            Some(v) => {
+                match v.resolve() {
+                    Ok(y) => y,
+                    Err(_) => v
+                }
+            }
             None => return blank,
         };
-        if h.is_branch() {
-            match h.shorthand() {
-                Some(v) => v.to_string(),
-                None => blank,
+
+        let s = h.shorthand();
+        if s.is_some() {
+            let ref_name = s.unwrap();
+            if ref_name != "HEAD" {
+                return ref_name.to_string();
+            } else {
+                let ref_name = h.symbolic_target();
+                if ref_name.is_some() {
+                    let ref_name_string = ref_name.unwrap().to_string();
+                    let mut path: Vec<&str> = ref_name_string.split("/").collect();
+                    let branch_short = path.pop();
+                    if branch_short.is_some() {
+                        return branch_short.unwrap().to_string();
+                    }
+                }
             }
-        } else {
-            let hash = match h.target() {
-                Some(v) => v.to_string(),
-                None => blank,
-            };
+        }
+
+        let hash = match h.target() {
+            Some(v) => v.to_string(),
+            None => blank,
+        };
+        if hash.len() >= 8 {
             let (s, _) = hash.split_at(7);
-            s.to_string()
+            return s.to_string();
+        } else {
+            return hash;
         }
     }
 
