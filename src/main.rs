@@ -163,6 +163,7 @@ impl Program {
     }
 
     fn get_file_status(&self) -> Option<HashMap<&str, u32>> {
+        // TODO: order, via https://doc.rust-lang.org/std/collections/struct.BTreeMap.html
         let mut d = HashMap::new();
 
         let changed = STATUS_WT_MODIFIED | STATUS_WT_DELETED | STATUS_WT_TYPECHANGE | STATUS_WT_RENAMED;
