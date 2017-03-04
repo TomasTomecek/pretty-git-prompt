@@ -43,6 +43,7 @@ impl Program {
         }
     }
 
+    // TODO: return Option
     fn get_current_branch_name(&self) -> String {
         let blank = String::from("");
         let h = match self.get_head() {
