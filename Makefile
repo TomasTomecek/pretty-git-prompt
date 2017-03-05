@@ -3,7 +3,7 @@
 default: build
 
 compile:
-	docker run -v ${PWD}:/app -v ~/.cargo:/root/.cargo -ti ${USER}/pretty-git-prompt
+	docker run -v ${PWD}:/app -v ~/.cargo/registry/:/root/.cargo/registry/ -ti ${USER}/pretty-git-prompt
 
 build: build-container
 	docker run -v ${PWD}:/app -ti ${USER}/pretty-git-prompt
