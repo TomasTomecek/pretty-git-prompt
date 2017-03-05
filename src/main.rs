@@ -8,6 +8,11 @@ use std::collections::HashMap;
 
 use git2::*;
 
+static CHANGED_SYMBOL: &'static str = "■";
+static NEW_SYMBOL: &'static str = "✚";
+static STAGED_SYMBOL: &'static str = "●";
+static CONFLICTED_SYMBOL: &'static str = "✖";
+
 
 struct Program {
     repo: Repository,
@@ -20,6 +25,11 @@ fn get_branch_remote(reference: Reference) -> Option<Oid> {
         Err(_) => return None,
     };
     upstream.get().target()
+}
+
+fn zsh_colorize(s: String, color: &str) -> String {
+    // {% ... %} correct word wrap with zsh
+    format!("%{{%F{{{color}}}%}}{s}%{{%f%}}", color=color, s=s)
 }
 
 impl Program {
@@ -163,7 +173,6 @@ impl Program {
     }
 
     fn get_file_status(&self) -> Option<HashMap<&str, u32>> {
-        // TODO: order, via https://doc.rust-lang.org/std/collections/struct.BTreeMap.html
         let mut d = HashMap::new();
 
         let changed = STATUS_WT_MODIFIED | STATUS_WT_DELETED | STATUS_WT_TYPECHANGE | STATUS_WT_RENAMED;
@@ -179,19 +188,19 @@ impl Program {
             // println!("{}", s.path().unwrap());
 
             if file_status.intersects(changed) {
-                let counter = d.entry("■").or_insert(0);
+                let counter = d.entry(CHANGED_SYMBOL).or_insert(0);
                 *counter += 1;
             };
             if file_status.contains(STATUS_WT_NEW) {
-                let counter = d.entry("✚").or_insert(0);
+                let counter = d.entry(NEW_SYMBOL).or_insert(0);
                 *counter += 1;
             };
             if file_status.intersects(staged) {
-                let counter = d.entry("●").or_insert(0);
+                let counter = d.entry(STAGED_SYMBOL).or_insert(0);
                 *counter += 1;
             };
             if file_status.intersects(STATUS_CONFLICTED) {
-                let counter = d.entry("✖").or_insert(0);
+                let counter = d.entry(CONFLICTED_SYMBOL).or_insert(0);
                 *counter += 1;
             };
         }
@@ -199,7 +208,7 @@ impl Program {
     }
 
     fn run(&self) {
-        let mut out = Vec::new();
+        let mut out: Vec<String> = Vec::new();
 
         let repo_state = self.get_repository_state();
         if repo_state.len() > 0 {
@@ -207,13 +216,13 @@ impl Program {
         }
 
         // master↑3↓4
-        let mut local = self.get_current_branch_name().clone();
+        let mut local = zsh_colorize(self.get_current_branch_name(), "blue");
         let (ahead, behind) = match self.get_current_branch_ahead_behind() {
             Some(x) => x,
             None => (0, 0),
         };
-        if ahead > 0 { local += &format!("↑{}", ahead); }
-        if behind > 0 { local += &format!("↓{}", behind); }
+        if ahead > 0 { local += &zsh_colorize(format!("↑{}", ahead), "white"); }
+        if behind > 0 { local += &zsh_colorize(format!("↓{}", behind), "white"); }
         out.push(local);
 
         // upstream↑2↓1
@@ -222,9 +231,9 @@ impl Program {
             None => (0, 0),
         };
         if ahead > 0 || behind > 0 {
-            let mut local = String::from("u");
-            if ahead > 0 { local += &format!("↑{}", ahead); }
-            if behind > 0 { local += &format!("↓{}", behind); }
+            let mut local = zsh_colorize(String::from("u"), "blue");
+            if ahead > 0 { local += &zsh_colorize(format!("↑{}", ahead), "white"); }
+            if behind > 0 { local += &zsh_colorize(format!("↓{}", behind), "white"); }
             out.push(local);
         }
 
@@ -232,11 +241,23 @@ impl Program {
             Some(s) => {
                 if s.len() > 0 {
                     let mut o = String::from("");
-                    for (k, v) in s {
-                        if v > 0 {
-                            o += &format!("{}{}", k, v);
-                        }
-                    }
+
+                    match s.get(CHANGED_SYMBOL) {
+                         Some(x) => o += &zsh_colorize(format!("{}{}", CHANGED_SYMBOL, x), "red"),
+                         None => {},
+                    };
+                    match s.get(CONFLICTED_SYMBOL) {
+                         Some(x) => o += &zsh_colorize(format!("{}{}", CONFLICTED_SYMBOL, x), "yellow"),
+                         None => {},
+                    };
+                    match s.get(NEW_SYMBOL) {
+                         Some(x) => o += &zsh_colorize(format!("{}{}", NEW_SYMBOL, x), "red"),
+                         None => {},
+                    };
+                    match s.get(STAGED_SYMBOL) {
+                         Some(x) => o += &zsh_colorize(format!("{}{}", STAGED_SYMBOL, x), "green"),
+                         None => {},
+                    };
                     out.push(o);
                 }
             },
