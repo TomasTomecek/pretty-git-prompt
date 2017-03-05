@@ -27,7 +27,7 @@ fn get_branch_remote(reference: Reference) -> Option<Oid> {
     upstream.get().target()
 }
 
-fn zsh_colorize(s: String, color: &str) -> String {
+fn zsh_colorize(s: &str, color: &str) -> String {
     // {% ... %} correct word wrap with zsh
     format!("%{{%F{{{color}}}%}}{s}%{{%f%}}", color=color, s=s)
 }
@@ -75,7 +75,7 @@ impl Program {
                 let ref_name = h.symbolic_target();
                 if ref_name.is_some() {
                     let ref_name_string = ref_name.unwrap().to_string();
-                    let mut path: Vec<&str> = ref_name_string.split("/").collect();
+                    let mut path: Vec<&str> = ref_name_string.split('/').collect();
                     let branch_short = path.pop();
                     if branch_short.is_some() {
                         return branch_short.unwrap().to_string();
@@ -90,9 +90,9 @@ impl Program {
         };
         if hash.len() >= 8 {
             let (s, _) = hash.split_at(7);
-            return s.to_string();
+            s.to_string()
         } else {
-            return hash;
+            hash
         }
     }
 
@@ -159,16 +159,13 @@ impl Program {
         match state {
             RepositoryState::Clean => String::from(""),
             RepositoryState::Merge => String::from("merge"),
-            RepositoryState::Revert => String::from("revert"),
-            RepositoryState::RevertSequence => String::from("revert"),
-            RepositoryState::CherryPick => String::from("cherry-pick"),
-            RepositoryState::CherryPickSequence => String::from("cherry-pick"),
+            RepositoryState::Revert | RepositoryState::RevertSequence => String::from("revert"),
+            RepositoryState::CherryPick | RepositoryState::CherryPickSequence => String::from("cherry-pick"),
             RepositoryState::Bisect => String::from("bisect"),
-            RepositoryState::Rebase => String::from("rebase"),
-            RepositoryState::RebaseInteractive => String::from("rebase"),
-            RepositoryState::RebaseMerge => String::from("rebase"),
-            RepositoryState::ApplyMailbox => String::from("apply"),
-            RepositoryState::ApplyMailboxOrRebase => String::from("apply"),
+            RepositoryState::Rebase |
+                RepositoryState::RebaseInteractive |
+                RepositoryState::RebaseMerge => String::from("rebase"),
+            RepositoryState::ApplyMailbox | RepositoryState::ApplyMailboxOrRebase => String::from("apply"),
         }
     }
 
@@ -211,18 +208,18 @@ impl Program {
         let mut out: Vec<String> = Vec::new();
 
         let repo_state = self.get_repository_state();
-        if repo_state.len() > 0 {
+        if !repo_state.is_empty() {
             out.push(repo_state);
         }
 
         // master↑3↓4
-        let mut local = zsh_colorize(self.get_current_branch_name(), "blue");
+        let mut local = zsh_colorize(&self.get_current_branch_name(), "blue");
         let (ahead, behind) = match self.get_current_branch_ahead_behind() {
             Some(x) => x,
             None => (0, 0),
         };
-        if ahead > 0 { local += &zsh_colorize(format!("↑{}", ahead), "white"); }
-        if behind > 0 { local += &zsh_colorize(format!("↓{}", behind), "white"); }
+        if ahead > 0 { local += &zsh_colorize(&format!("↑{}", ahead), "white"); }
+        if behind > 0 { local += &zsh_colorize(&format!("↓{}", behind), "white"); }
         out.push(local);
 
         // upstream↑2↓1
@@ -231,38 +228,31 @@ impl Program {
             None => (0, 0),
         };
         if ahead > 0 || behind > 0 {
-            let mut local = zsh_colorize(String::from("u"), "blue");
-            if ahead > 0 { local += &zsh_colorize(format!("↑{}", ahead), "white"); }
-            if behind > 0 { local += &zsh_colorize(format!("↓{}", behind), "white"); }
+            let mut local = zsh_colorize("u", "blue");
+            if ahead > 0 { local += &zsh_colorize(&format!("↑{}", ahead), "white"); }
+            if behind > 0 { local += &zsh_colorize(&format!("↓{}", behind), "white"); }
             out.push(local);
         }
 
-        match self.get_file_status() {
-            Some(s) => {
-                if s.len() > 0 {
-                    let mut o = String::from("");
+        if let Some(s) = self.get_file_status() {
+            if !s.is_empty() {
+                let mut o = String::from("");
 
-                    match s.get(CHANGED_SYMBOL) {
-                         Some(x) => o += &zsh_colorize(format!("{}{}", CHANGED_SYMBOL, x), "red"),
-                         None => {},
-                    };
-                    match s.get(CONFLICTED_SYMBOL) {
-                         Some(x) => o += &zsh_colorize(format!("{}{}", CONFLICTED_SYMBOL, x), "yellow"),
-                         None => {},
-                    };
-                    match s.get(NEW_SYMBOL) {
-                         Some(x) => o += &zsh_colorize(format!("{}{}", NEW_SYMBOL, x), "red"),
-                         None => {},
-                    };
-                    match s.get(STAGED_SYMBOL) {
-                         Some(x) => o += &zsh_colorize(format!("{}{}", STAGED_SYMBOL, x), "green"),
-                         None => {},
-                    };
-                    out.push(o);
+                if let Some(x) = s.get(CHANGED_SYMBOL) {
+                     o += &zsh_colorize(&format!("{}{}", CHANGED_SYMBOL, x), "red");
                 }
-            },
-            None => {}
-        };
+                if let Some(x) = s.get(CONFLICTED_SYMBOL) {
+                     o += &zsh_colorize(&format!("{}{}", CONFLICTED_SYMBOL, x), "yellow");
+                };
+                if let Some(x) = s.get(NEW_SYMBOL) {
+                     o += &zsh_colorize(&format!("{}{}", NEW_SYMBOL, x), "red");
+                };
+                if let Some(x) = s.get(STAGED_SYMBOL) {
+                     o += &zsh_colorize(&format!("{}{}", STAGED_SYMBOL, x), "green");
+                };
+                out.push(o);
+            }
+        }
 
         // println!("{}", out.len());
         println!("{}", out.join("|"));

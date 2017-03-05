@@ -18,9 +18,9 @@ RUN mkdir /rust && cd /rust && \
     ./install.sh && \
     rm -rf /rust
 
-RUN dnf install -y openssl-devel cmake make file
+RUN dnf install -y openssl-devel cmake make file libcurl-devel
 
-# RUN cargo install clippy
+RUN cargo install clippy
 
 COPY . /app
 WORKDIR /app

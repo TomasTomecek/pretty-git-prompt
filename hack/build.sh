@@ -2,5 +2,5 @@
 
 set -ex
 
-# cargo clippy
+cargo clippy
 cargo build --release
