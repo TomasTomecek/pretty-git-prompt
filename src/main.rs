@@ -2,7 +2,10 @@
 //  * add option to debug: print all errors
 //  * colors
 
+mod format;
 extern crate git2;
+
+use format::{CanFormat,ZshColorFormatter,NoColorFormatter,FormatEntry};
 
 use std::collections::HashMap;
 
@@ -14,10 +17,6 @@ static STAGED_SYMBOL: &'static str = "●";
 static CONFLICTED_SYMBOL: &'static str = "✖";
 
 
-struct Program {
-    repo: Repository,
-}
-
 fn get_branch_remote(reference: Reference) -> Option<Oid> {
     let b = Branch::wrap(reference);
     let upstream = match b.upstream() {
@@ -27,12 +26,12 @@ fn get_branch_remote(reference: Reference) -> Option<Oid> {
     upstream.get().target()
 }
 
-fn zsh_colorize(s: &str, color: &str) -> String {
-    // {% ... %} correct word wrap with zsh
-    format!("%{{%F{{{color}}}%}}{s}%{{%f%}}", color=color, s=s)
+
+struct Backend {
+    repo: Repository,
 }
 
-impl Program {
+impl Backend {
     fn get_head(&self) -> Option<Reference> {
         match self.repo.head() {
             Ok(head) => Some(head),
@@ -203,68 +202,103 @@ impl Program {
         }
         Some(d)
     }
+}
 
-    fn run(&self) {
-        let mut out: Vec<String> = Vec::new();
+// struct for displaying all the data
+struct Output<T> {
+    out: Vec<String>,
+    format: T,
+    backend: Backend,
+}
 
-        let repo_state = self.get_repository_state();
+impl<T: CanFormat> Output<T> {
+    pub fn new(format: T, backend: Backend) -> Output<T> {
+        let out: Vec<String> = Vec::new();
+        Output { out: out, backend: backend, format: format }
+    }
+
+    // add repository state to output buffer
+    fn add_repository_state(&mut self) {
+        let repo_state = self.backend.get_repository_state();
         if !repo_state.is_empty() {
-            out.push(repo_state);
+            let o = self.f(&repo_state, "");
+            self.out.push(o);
         }
+    }
 
-        // master↑3↓4
-        let mut local = zsh_colorize(&self.get_current_branch_name(), "blue");
-        let (ahead, behind) = match self.get_current_branch_ahead_behind() {
+    // master↑3↓4
+    fn add_local_branch_state(&mut self) {
+        let mut local: String = self.f(&self.backend.get_current_branch_name(), "blue");
+        let (ahead, behind) = match self.backend.get_current_branch_ahead_behind() {
             Some(x) => x,
             None => (0, 0),
         };
-        if ahead > 0 { local += &zsh_colorize(&format!("↑{}", ahead), "white"); }
-        if behind > 0 { local += &zsh_colorize(&format!("↓{}", behind), "white"); }
-        out.push(local);
+        if ahead > 0 { local += &self.f(&format!("↑{}", ahead), "white"); }
+        if behind > 0 { local += &self.f(&format!("↓{}", behind), "white"); }
+        self.out.push(local);
+    }
 
-        // upstream↑2↓1
-        let (ahead, behind) = match self.get_upstream_branch_ahead_behind() {
+    // upstream↑2↓1
+    fn add_upstream_branch_state(&mut self) {
+        let (ahead, behind) = match self.backend.get_upstream_branch_ahead_behind() {
             Some(x) => x,
             None => (0, 0),
         };
         if ahead > 0 || behind > 0 {
-            let mut local = zsh_colorize("u", "blue");
-            if ahead > 0 { local += &zsh_colorize(&format!("↑{}", ahead), "white"); }
-            if behind > 0 { local += &zsh_colorize(&format!("↓{}", behind), "white"); }
-            out.push(local);
+            let mut local: String = self.f("u", "blue");
+            if ahead > 0 { local += &self.f(&format!("↑{}", ahead), "white"); }
+            if behind > 0 { local += &self.f(&format!("↓{}", behind), "white"); }
+            self.out.push(local);
         }
+    }
 
-        if let Some(s) = self.get_file_status() {
+    fn f(&self, text: &str, color: &str) -> String {
+        self.format.format(FormatEntry{text: String::from(text), color: String::from(color)})
+    }
+
+    fn add_file_status(&mut self) {
+        if let Some(s) = self.backend.get_file_status() {
             if !s.is_empty() {
                 let mut o = String::from("");
 
                 if let Some(x) = s.get(CHANGED_SYMBOL) {
-                     o += &zsh_colorize(&format!("{}{}", CHANGED_SYMBOL, x), "red");
+                     o += &self.f(&format!("{}{}", CHANGED_SYMBOL, x), "red");
                 }
                 if let Some(x) = s.get(CONFLICTED_SYMBOL) {
-                     o += &zsh_colorize(&format!("{}{}", CONFLICTED_SYMBOL, x), "yellow");
-                };
+                     o += &self.f(&format!("{}{}", CONFLICTED_SYMBOL, x), "yellow");
+                }
                 if let Some(x) = s.get(NEW_SYMBOL) {
-                     o += &zsh_colorize(&format!("{}{}", NEW_SYMBOL, x), "red");
-                };
+                     o += &self.f(&format!("{}{}", NEW_SYMBOL, x), "red");
+                }
                 if let Some(x) = s.get(STAGED_SYMBOL) {
-                     o += &zsh_colorize(&format!("{}{}", STAGED_SYMBOL, x), "green");
-                };
-                out.push(o);
+                     o += &self.f(&format!("{}{}", STAGED_SYMBOL, x), "green");
+                }
+                self.out.push(o);
             }
         }
+    }
 
+    fn populate(&mut self) {
+        self.add_repository_state();
+        self.add_local_branch_state();
+        self.add_upstream_branch_state();
+        self.add_file_status();
+    }
+
+    // print output buffer
+    fn output(&self) {
         // println!("{}", out.len());
-        println!("{}", out.join("|"));
+        println!("{}", self.out.join("|"));
     }
 }
-
 
 fn main() {
     let repo = match Repository::open(".") {
         Ok(repo) => repo,
         Err(_) => return (),
     };
-    let program = Program{ repo: repo };
-    program.run();
+    let backend = Backend{ repo: repo };
+    let mut output = Output::new(NoColorFormatter{}, backend);
+    output.populate();
+    output.output();
 }
