@@ -25,7 +25,7 @@ impl Clone for FormatEntry {
 impl CanFormat for ZshColorFormatter {
     fn format(&self, f: FormatEntry) -> String {
         // {% ... %} correct word wrap with zsh
-        if f.color.is_empty() {
+        if f.text.is_empty() || f.color.is_empty() {
             f.text
         } else {
             format!("%{{%F{{{color}}}%}}{s}%{{%f%}}", color=f.color, s=f.text)
@@ -39,3 +39,29 @@ impl CanFormat for NoColorFormatter {
     }
 }
 
+
+#[test]
+fn test_zsh_color() {
+    let z = ZshColorFormatter{};
+    let f = FormatEntry{text: String::from("asd"), color: String::from("white")};
+    let result = z.format(f);
+    assert_eq!(result, "%{%F{white}%}asd%{%f%}");
+}
+
+
+#[test]
+fn test_zsh_color_blank_color() {
+    let z = ZshColorFormatter{};
+    let f = FormatEntry{text: String::from("asd"), color: String::from("")};
+    let result = z.format(f);
+    assert_eq!(result, "asd");
+}
+
+
+#[test]
+fn test_zsh_color_blank_str() {
+    let z = ZshColorFormatter{};
+    let f = FormatEntry{text: String::from(""), color: String::from("white")};
+    let result = z.format(f);
+    assert_eq!(result, "");
+}
