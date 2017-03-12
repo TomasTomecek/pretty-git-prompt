@@ -25,8 +25,11 @@ impl Clone for FormatEntry {
 impl CanFormat for ZshColorFormatter {
     fn format(&self, f: FormatEntry) -> String {
         // {% ... %} correct word wrap with zsh
-        // TODO: figure out when color is ""
-        format!("%{{%F{{{color}}}%}}{s}%{{%f%}}", color=f.color, s=f.text)
+        if f.color.is_empty() {
+            f.text
+        } else {
+            format!("%{{%F{{{color}}}%}}{s}%{{%f%}}", color=f.color, s=f.text)
+        }
     }
 }
 
