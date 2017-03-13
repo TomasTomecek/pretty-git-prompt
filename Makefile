@@ -13,3 +13,4 @@ build-container:
 
 test: compile
 	py.test-3 -vv tests
+	docker run -v ${PWD}:/app -v ~/.cargo/registry/:/root/.cargo/registry/ -ti ${USER}/pretty-git-prompt cargo test
