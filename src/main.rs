@@ -2,9 +2,11 @@
 //  * add option to debug: print all errors
 
 mod format;
+mod cli;
 extern crate git2;
 
-use format::{CanFormat,ZshColorFormatter,NoColorFormatter,FormatEntry};
+use cli::cli;
+use format::{Format,FormatType,FormatEntry};
 
 use std::collections::HashMap;
 
@@ -204,16 +206,16 @@ impl Backend {
 }
 
 // struct for displaying all the data
-struct Output<T> {
+struct Output {
     out: Vec<String>,
-    format: T,
+    format: Format,
     backend: Backend,
 }
 
-impl<T: CanFormat> Output<T> {
-    pub fn new(format: T, backend: Backend) -> Output<T> {
+impl Output {
+    pub fn new(format_type: FormatType, backend: Backend) -> Output {
         let out: Vec<String> = Vec::new();
-        Output { out: out, backend: backend, format: format }
+        Output { out: out, backend: backend, format: Format{ format_type: format_type } }
     }
 
     // add repository state to output buffer
@@ -297,7 +299,16 @@ fn main() {
         Err(_) => return (),
     };
     let backend = Backend{ repo: repo };
-    let mut output = Output::new(NoColorFormatter{}, backend);
+    let app = cli();
+    let matches = app.get_matches();
+
+    let x = matches.value_of("color_mode").unwrap();
+    let ft: FormatType = match x {
+        "zsh" => FormatType::Zsh,
+        "no" | _ => FormatType::NoColor,
+    };
+    let mut output = Output::new(ft, backend);
+
     output.populate();
     output.output();
 }
