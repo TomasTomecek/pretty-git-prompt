@@ -11,9 +11,12 @@ class G():
         self.tmpdir = tmpdir
         self.repo = tmpdir.mkdir("repo")
         self.origin = tmpdir.mkdir("origin")
-        subprocess.check_output(["git", "init", "--bare", self.origin.realpath()])
+        subprocess.check_output(["git", "init", "--bare", str(self.origin.realpath())])
         self.upstream = tmpdir.mkdir("upstream")
-        subprocess.check_output(["git", "init", "--bare", self.upstream.realpath()])
+        subprocess.check_output(["git", "init", "--bare", str(self.upstream.realpath())])
+        subprocess.check_output(["git", "config", "--global", "user.email", "pretty-git-prompt@example.com"])
+        subprocess.check_output(["git", "config", "--global", "user.name", "Git \"Pretty\" Prompter"])
+
         self.cwd = None
 
     def __enter__(self):
@@ -22,14 +25,16 @@ class G():
         return self
 
     def __exit__(self, *args):
-        os.chdir(self.cwd)
+        os.chdir(str(self.cwd))
 
     def prepare(self):
         raise NotImplemented()
 
     def run(self):
         """ run program, return output """
-        binary_path = os.path.join(self.cwd, "target/release/git-stats")
+        binary_path = os.path.join(str(self.cwd), "target/debug/pretty-git-prompt")
+        if not os.path.exists(binary_path):
+            binary_path = os.path.join(str(self.cwd), "target/release/pretty-git-prompt")
         return subprocess.check_output([binary_path]).decode("utf-8").rstrip()
 
 
@@ -67,7 +72,7 @@ class SimpleDirtyWithCommitRepo(SimpleRepo):
 class RepoWithOrigin(SimpleRepo):
     def do(self):
         super().do()
-        subprocess.check_call(["git", "remote", "add", "origin", self.origin.realpath()])
+        subprocess.check_call(["git", "remote", "add", "origin", str(self.origin.realpath())])
 
 
 class RWOLocalCommits(RepoWithOrigin):
