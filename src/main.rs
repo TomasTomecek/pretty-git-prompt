@@ -122,12 +122,12 @@ impl Backend {
         }
     }
 
-    fn get_upstream_branch_ahead_behind(&self) -> Option<(usize, usize)>  {
-        let upstream_reference = match self.find_upstream_repo_branch() {
+    fn get_remote_branch_ahead_behind(&self, remote_name: &str, branch_name: &str) -> Option<(usize, usize)>  {
+        let remote_reference = match self.find_remote_branch(remote_name, branch_name) {
             Ok(u) => u.into_reference(),
             Err(_) => return None,
         };
-        let upstream_reference_oid = match upstream_reference.target() {
+        let remote_reference_oid = match remote_reference.target() {
             Some(u) => u,
             None => return None,
         };
@@ -135,16 +135,21 @@ impl Backend {
             Some(r) => r,
             None => return None
         };
-        let res = self.repo.graph_ahead_behind(oid, upstream_reference_oid);
+        let res = self.repo.graph_ahead_behind(oid, remote_reference_oid);
         match res {
             Ok(r) => Some(r),
             Err(_) => None
         }
     }
 
-    fn find_upstream_repo_branch(&self) -> Result<Branch, Error> {
-        let us_branch_name = format!("{}{}", "upstream/", self.get_current_branch_name());
-        self.repo.find_branch(&us_branch_name, BranchType::Remote)
+    fn find_remote_branch(&self, remote_name: &str, branch_name: &str) -> Result<Branch, Error> {
+        let cur_branch_name = self.get_current_branch_name();
+        let b = match branch_name {
+            x if x.is_empty() => &cur_branch_name,
+            y => y
+        };
+        let remote_branch_name = format!("{}/{}", remote_name, b);
+        self.repo.find_branch(&remote_branch_name, BranchType::Remote)
     }
 
     fn get_status(&self) -> Option<Statuses> {
@@ -254,26 +259,31 @@ impl Output {
     }
 
     // upstream↑2↓1
-    fn add_upstream_branch_state(&mut self) {
-        let (ahead, behind) = match self.backend.get_upstream_branch_ahead_behind() {
-            Some(x) => x,
-            None => (0, 0),
-        };
-        if ahead > 0 || behind > 0 {
-            let mut local: String = self.f("u", &self.conf.get_branch_color());
-            if ahead > 0 {
-                local += &self.f(
-                    &format!("{}{}", self.conf.get_difference_ahead_symbol(), ahead),
-                    &self.conf.get_remote_difference_color()
+    fn add_remote_branches_state(&mut self) {
+        for (remote_name, branch_name) in self.conf.get_remotes_monitoring() {
+            let (ahead, behind) = match self.backend.get_remote_branch_ahead_behind(&remote_name, &branch_name) {
+                Some(x) => x,
+                None => (0, 0),
+            };
+            if ahead > 0 || behind > 0 {
+                let mut local: String = self.f(
+                    &format!("{}/{}", remote_name, branch_name),
+                    &self.conf.get_branch_color()
                 );
+                if ahead > 0 {
+                    local += &self.f(
+                        &format!("{}{}", self.conf.get_difference_ahead_symbol(), ahead),
+                        &self.conf.get_remote_difference_color()
+                    );
+                }
+                if behind > 0 {
+                    local += &self.f(
+                        &format!("{}{}", self.conf.get_difference_behind_symbol(), behind),
+                        &self.conf.get_remote_difference_color()
+                    );
+                }
+                self.out.push(local);
             }
-            if behind > 0 {
-                local += &self.f(
-                    &format!("{}{}", self.conf.get_difference_behind_symbol(), behind),
-                    &self.conf.get_remote_difference_color()
-                );
-            }
-            self.out.push(local);
         }
     }
 
@@ -293,7 +303,7 @@ impl Output {
                      o += &self.f(&format!("{}{}", self.conf.get_changed_symbol(), x), &self.conf.get_changed_color());
                 }
                 if let Some(x) = s.get(STAGED_KEY) {
-                     o += &self.f(&format!("{}{}", self.conf.get_staged_symbol(), x), &self.conf.get_staged_symbol());
+                     o += &self.f(&format!("{}{}", self.conf.get_staged_symbol(), x), &self.conf.get_staged_color());
                 }
                 if let Some(x) = s.get(CONFLICTS_KEY) {
                      o += &self.f(&format!("{}{}", self.conf.get_conflicts_symbol(), x), &self.conf.get_conflicts_color());
@@ -306,7 +316,7 @@ impl Output {
     fn populate(&mut self) {
         self.add_repository_state();
         self.add_local_branch_state();
-        self.add_upstream_branch_state();
+        self.add_remote_branches_state();
         self.add_file_status();
     }
 
