@@ -3,6 +3,7 @@
 #
 # stable container is meant to be used
 # unstable is meant for development & testing
+# TODO: create separate build image for stable and unstable
 
 .PHONY=default compile build build-unstable-container build-stable-container stable-build unstable-build exec-stable-build exec-unstable-build test exec-test
 DEFAULT_RUST_STABLE_VERSION="1.15.1"
