@@ -4,7 +4,7 @@ use self::yaml_rust::{YamlLoader, Yaml};
 use std::collections::btree_map::BTreeMap;
 
 // TODO: add comments to the yaml
-// TODO: track_remotes -> branch -> '' -- track current remote branch
+//        * document that empty branch means track current
 // TODO: load this file from disk
 // TODO: add option to create default
 static DEFAULT_CONF: &'static str = "
