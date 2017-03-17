@@ -3,19 +3,22 @@
 
 mod format;
 mod cli;
+mod conf;
 extern crate git2;
 
 use cli::cli;
 use format::{Format,FormatType,FormatEntry};
+use conf::{Conf,get_default_configuration};
 
 use std::collections::HashMap;
 
 use git2::*;
 
-static CHANGED_SYMBOL: &'static str = "■";
-static NEW_SYMBOL: &'static str = "✚";
-static STAGED_SYMBOL: &'static str = "●";
-static CONFLICTED_SYMBOL: &'static str = "✖";
+// used to index values in map
+static CHANGED_KEY: &'static str = "changed";
+static NEW_KEY: &'static str = "new";
+static STAGED_KEY: &'static str = "staged";
+static CONFLICTS_KEY: &'static str = "conflicts";
 
 
 fn get_branch_remote(reference: Reference) -> Option<Oid> {
@@ -185,19 +188,19 @@ impl Backend {
             // println!("{}", s.path().unwrap());
 
             if file_status.intersects(changed) {
-                let counter = d.entry(CHANGED_SYMBOL).or_insert(0);
+                let counter = d.entry(CHANGED_KEY).or_insert(0);
                 *counter += 1;
             };
             if file_status.contains(STATUS_WT_NEW) {
-                let counter = d.entry(NEW_SYMBOL).or_insert(0);
+                let counter = d.entry(NEW_KEY).or_insert(0);
                 *counter += 1;
             };
             if file_status.intersects(staged) {
-                let counter = d.entry(STAGED_SYMBOL).or_insert(0);
+                let counter = d.entry(STAGED_KEY).or_insert(0);
                 *counter += 1;
             };
             if file_status.intersects(STATUS_CONFLICTED) {
-                let counter = d.entry(CONFLICTED_SYMBOL).or_insert(0);
+                let counter = d.entry(CONFLICTS_KEY).or_insert(0);
                 *counter += 1;
             };
         }
@@ -205,17 +208,18 @@ impl Backend {
     }
 }
 
-// struct for displaying all the data
+// struct for displaying all the data -- the actual program
 struct Output {
     out: Vec<String>,
     format: Format,
     backend: Backend,
+    conf: Conf,
 }
 
 impl Output {
-    pub fn new(format_type: FormatType, backend: Backend) -> Output {
+    pub fn new(format_type: FormatType, backend: Backend, conf: Conf) -> Output {
         let out: Vec<String> = Vec::new();
-        Output { out: out, backend: backend, format: Format{ format_type: format_type } }
+        Output { out: out, backend: backend, format: Format{ format_type: format_type }, conf: conf }
     }
 
     // add repository state to output buffer
@@ -229,13 +233,23 @@ impl Output {
 
     // master↑3↓4
     fn add_local_branch_state(&mut self) {
-        let mut local: String = self.f(&self.backend.get_current_branch_name(), "blue");
+        let mut local: String = self.f(&self.backend.get_current_branch_name(), &self.conf.get_branch_color());
         let (ahead, behind) = match self.backend.get_current_branch_ahead_behind() {
             Some(x) => x,
             None => (0, 0),
         };
-        if ahead > 0 { local += &self.f(&format!("↑{}", ahead), "white"); }
-        if behind > 0 { local += &self.f(&format!("↓{}", behind), "white"); }
+        if ahead > 0 {
+            local += &self.f(
+                &format!("{}{}", self.conf.get_difference_ahead_symbol(), ahead),
+                &self.conf.get_remote_difference_color()
+            );
+        }
+        if behind > 0 {
+            local += &self.f(
+                &format!("{}{}", self.conf.get_difference_behind_symbol(), behind),
+                &self.conf.get_remote_difference_color()
+            );
+        }
         self.out.push(local);
     }
 
@@ -246,9 +260,19 @@ impl Output {
             None => (0, 0),
         };
         if ahead > 0 || behind > 0 {
-            let mut local: String = self.f("u", "blue");
-            if ahead > 0 { local += &self.f(&format!("↑{}", ahead), "white"); }
-            if behind > 0 { local += &self.f(&format!("↓{}", behind), "white"); }
+            let mut local: String = self.f("u", &self.conf.get_branch_color());
+            if ahead > 0 {
+                local += &self.f(
+                    &format!("{}{}", self.conf.get_difference_ahead_symbol(), ahead),
+                    &self.conf.get_remote_difference_color()
+                );
+            }
+            if behind > 0 {
+                local += &self.f(
+                    &format!("{}{}", self.conf.get_difference_behind_symbol(), behind),
+                    &self.conf.get_remote_difference_color()
+                );
+            }
             self.out.push(local);
         }
     }
@@ -262,17 +286,17 @@ impl Output {
             if !s.is_empty() {
                 let mut o = String::from("");
 
-                if let Some(x) = s.get(CHANGED_SYMBOL) {
-                     o += &self.f(&format!("{}{}", CHANGED_SYMBOL, x), "red");
+                if let Some(x) = s.get(NEW_KEY) {
+                     o += &self.f(&format!("{}{}", self.conf.get_new_symbol(), x), &self.conf.get_new_color());
                 }
-                if let Some(x) = s.get(CONFLICTED_SYMBOL) {
-                     o += &self.f(&format!("{}{}", CONFLICTED_SYMBOL, x), "yellow");
+                if let Some(x) = s.get(CHANGED_KEY) {
+                     o += &self.f(&format!("{}{}", self.conf.get_changed_symbol(), x), &self.conf.get_changed_color());
                 }
-                if let Some(x) = s.get(NEW_SYMBOL) {
-                     o += &self.f(&format!("{}{}", NEW_SYMBOL, x), "red");
+                if let Some(x) = s.get(STAGED_KEY) {
+                     o += &self.f(&format!("{}{}", self.conf.get_staged_symbol(), x), &self.conf.get_staged_symbol());
                 }
-                if let Some(x) = s.get(STAGED_SYMBOL) {
-                     o += &self.f(&format!("{}{}", STAGED_SYMBOL, x), "green");
+                if let Some(x) = s.get(CONFLICTS_KEY) {
+                     o += &self.f(&format!("{}{}", self.conf.get_conflicts_symbol(), x), &self.conf.get_conflicts_color());
                 }
                 self.out.push(o);
             }
@@ -299,6 +323,7 @@ fn main() {
         Err(_) => return (),
     };
     let backend = Backend{ repo: repo };
+    let conf = get_default_configuration();
     let app = cli();
     let matches = app.get_matches();
 
@@ -307,7 +332,7 @@ fn main() {
         "zsh" => FormatType::Zsh,
         "no" | _ => FormatType::NoColor,
     };
-    let mut output = Output::new(ft, backend);
+    let mut output = Output::new(ft, backend, conf);
 
     output.populate();
     output.output();
