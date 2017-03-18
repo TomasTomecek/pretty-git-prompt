@@ -9,11 +9,13 @@ use std::path::{Path,PathBuf};
 // TODO: add comments to the yaml
 //        * document that empty branch means track current
 // TODO: load this file from disk
+// TODO: prepare for future: make dict of symbols, colors, remotes
+//        * enable specifying bold
 static DEFAULT_CONF: &'static str = "---
 symbols:
     new: '✚'
-    changed: '■'
-    staged: '●'
+    changed: 'Δ'
+    staged: '▶'
     conflicts: '✖'
     difference_ahead: '↑'
     difference_behind: '↓'
@@ -22,7 +24,7 @@ monitor_remotes:
 colors:
     branch: 'blue'
     remote_difference: 'white'
-    new: 'red'
+    new: '014'
     changed: 'red'
     staged: 'green'
     conflicts: 'yellow'
