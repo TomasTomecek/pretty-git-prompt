@@ -1,10 +1,12 @@
-use yaml_rust::{YamlLoader, Yaml};
-
 use std::collections::btree_map::BTreeMap;
-use std::fs::{OpenOptions,remove_file};
+use std::fs::{File,OpenOptions,remove_file};
 use std::io;
 use std::io::{Write,Read};
 use std::path::{Path,PathBuf};
+
+use constants::{get_default_config_path};
+
+use yaml_rust::{YamlLoader, Yaml};
 
 // TODO: add comments to the yaml
 //        * document that empty branch means track current
@@ -88,8 +90,33 @@ impl Conf {
     }
 }
 
-pub fn get_default_configuration() -> Conf {
-    let docs = YamlLoader::load_from_str(DEFAULT_CONF).unwrap();
+pub fn load_configuration_from_file() -> Result<String, io::Error> {
+    let path = get_default_config_path();
+    let mut file = match File::open(path) {
+        Ok(f) => f,
+        Err(e) => return Err(e)
+    };
+    let mut contents = String::new();
+    match file.read_to_string(&mut contents) {
+        Ok(size) => Ok(contents),
+        Err(e) => Err(e)
+    }
+}
+
+pub fn get_configuration() -> Conf {
+    let content = match load_configuration_from_file() {
+        Ok(f) => f,
+        Err(e) => {
+            let kind = e.kind();
+            if kind == io::ErrorKind::NotFound {
+                String::from(DEFAULT_CONF)
+            } else {
+                println!("ERROR");
+                panic!("Couldn't open configuration file: {:?}", kind);
+            }
+        }
+    };
+    let docs = YamlLoader::load_from_str(&content).unwrap();
     Conf::new(docs[0].clone())
 }
 
@@ -115,37 +142,37 @@ pub fn create_default_config(path: PathBuf) -> Result<String, io::Error> {
 
 #[test]
 fn test_default_new_symbol() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     assert_eq!(c.get_new_symbol(), "✚");
 }
 #[test]
 fn test_default_changed_symbol() {
-    let c = get_default_configuration();
-    assert_eq!(c.get_changed_symbol(), "■");
+    let c = get_configuration();
+    assert_eq!(c.get_changed_symbol(), "Δ");
 }
 #[test]
 fn test_default_staged_symbol() {
-    let c = get_default_configuration();
-    assert_eq!(c.get_staged_symbol(), "●");
+    let c = get_configuration();
+    assert_eq!(c.get_staged_symbol(), "▶");
 }
 #[test]
 fn test_default_conflicts_symbol() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     assert_eq!(c.get_conflicts_symbol(), "✖");
 }
 #[test]
 fn test_difference_ahead_symbol() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     assert_eq!(c.get_difference_ahead_symbol(), "↑");
 }
 #[test]
 fn test_difference_behind_symbol() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     assert_eq!(c.get_difference_behind_symbol(), "↓");
 }
 #[test]
 fn test_default_monitored_remotes() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     let remotes = c.get_remotes_monitoring();
     assert_eq!(remotes["upstream"], String::from("master"));
 }
@@ -168,32 +195,32 @@ fn test_monitored_remotes_ordering() {
 }
 #[test]
 fn test_default_branch_color() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     assert_eq!(c.get_branch_color(), "blue");
 }
 #[test]
 fn test_default_remote_difference_color() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     assert_eq!(c.get_remote_difference_color(), "white");
 }
 #[test]
 fn test_default_new_color() {
-    let c = get_default_configuration();
-    assert_eq!(c.get_new_color(), "red");
+    let c = get_configuration();
+    assert_eq!(c.get_new_color(), "014");
 }
 #[test]
 fn test_default_changed_color() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     assert_eq!(c.get_changed_color(), "red");
 }
 #[test]
 fn test_default_staged_color() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     assert_eq!(c.get_staged_color(), "green");
 }
 #[test]
 fn test_default_conflicts_color() {
-    let c = get_default_configuration();
+    let c = get_configuration();
     assert_eq!(c.get_conflicts_color(), "yellow");
 }
 #[allow(unused_must_use)]
@@ -207,9 +234,7 @@ fn test_create_default_config() {
     let result = create_default_config(p.clone());
     assert!(result.is_ok());
 
-    let mut file = OpenOptions::new()
-                .read(true)
-                .open(p.clone()).unwrap();
+    let mut file = File::open(p.clone()).unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents);
     assert_eq!(contents, DEFAULT_CONF);
@@ -228,6 +253,20 @@ fn test_create_default_config_when_exists() {
 
     let result = create_default_config(p.clone());
     assert!(result.is_err());
+
+    remove_file(p.clone());
+}
+#[test]
+fn test_load_default_config() {
+    let p = PathBuf::from("/tmp/test_pretty_git_prompt_config3");
+    if Path::new(&p).exists() {
+        remove_file(p.clone());
+    }
+
+    let result = create_default_config(p.clone());
+    assert!(result.is_ok());
+
+    let c = get_configuration();
 
     remove_file(p.clone());
 }

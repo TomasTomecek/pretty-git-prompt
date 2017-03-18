@@ -15,7 +15,7 @@ def test_simple_untracked_files_repo(tmpdir):
 
 def test_changed_files_repo(tmpdir):
     with SimpleChangedFilesRepo(tmpdir) as r:
-        assert r.run() == "master|●1"
+        assert r.run() == "master|▶1"
 
 
 def test_simple_repo(tmpdir):
@@ -25,7 +25,7 @@ def test_simple_repo(tmpdir):
 
 def test_simple_dirty_with_commit_repo(tmpdir):
     with SimpleDirtyWithCommitRepo(tmpdir) as r:
-        assert r.run() == "master|■1"
+        assert r.run() == "master|Δ1"
 
 
 def test_repo_with_origin(tmpdir):
