@@ -1,14 +1,15 @@
-extern crate yaml_rust;
-use self::yaml_rust::{YamlLoader, Yaml};
+use yaml_rust::{YamlLoader, Yaml};
 
 use std::collections::btree_map::BTreeMap;
+use std::fs::{OpenOptions,remove_file};
+use std::io;
+use std::io::{Write,Read};
+use std::path::{Path,PathBuf};
 
 // TODO: add comments to the yaml
 //        * document that empty branch means track current
 // TODO: load this file from disk
-// TODO: add option to create default
-static DEFAULT_CONF: &'static str = "
----
+static DEFAULT_CONF: &'static str = "---
 symbols:
     new: '✚'
     changed: '■'
@@ -88,6 +89,26 @@ impl Conf {
 pub fn get_default_configuration() -> Conf {
     let docs = YamlLoader::load_from_str(DEFAULT_CONF).unwrap();
     Conf::new(docs[0].clone())
+}
+
+pub fn create_default_config(path: PathBuf) -> Result<String, io::Error> {
+    match OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(path.clone()) {
+        Ok(mut file) => {
+            match file.write_all(&String::from(DEFAULT_CONF).into_bytes()) {
+                Ok(_) => (),
+                Err(e) => return Err(e)
+            };
+            match file.flush() {
+                Ok(_) => (),
+                Err(e) => return Err(e)
+            };
+            Ok(String::from(path.to_str().unwrap()))
+        },
+        Err(e) => Err(e)
+    }
 }
 
 #[test]
@@ -172,4 +193,39 @@ fn test_default_staged_color() {
 fn test_default_conflicts_color() {
     let c = get_default_configuration();
     assert_eq!(c.get_conflicts_color(), "yellow");
+}
+#[allow(unused_must_use)]
+#[test]
+fn test_create_default_config() {
+    let p = PathBuf::from("/tmp/test_pretty_git_prompt_config1");
+    if Path::new(&p).exists() {
+        remove_file(p.clone());
+    }
+
+    let result = create_default_config(p.clone());
+    assert!(result.is_ok());
+
+    let mut file = OpenOptions::new()
+                .read(true)
+                .open(p.clone()).unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents);
+    assert_eq!(contents, DEFAULT_CONF);
+
+    remove_file(p.clone());
+}
+#[test]
+fn test_create_default_config_when_exists() {
+    let p = PathBuf::from("/tmp/test_pretty_git_prompt_config2");
+    OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(p.clone());
+    assert!(Path::new(&p).exists());
+
+    let result = create_default_config(p.clone());
+    assert!(result.is_err());
+
+    remove_file(p.clone());
 }

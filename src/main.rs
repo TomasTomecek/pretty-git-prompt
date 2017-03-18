@@ -1,11 +1,13 @@
 // TODO:
 //  * add option to debug: print all errors
 
+extern crate clap;
 extern crate git2;
+extern crate yaml_rust;
 
 use backend::Backend;
 use cli::cli;
-use conf::{Conf,get_default_configuration};
+use conf::{Conf,get_default_configuration,create_default_config};
 use constants::*;
 use format::{Format,FormatType,FormatEntry};
 
@@ -141,6 +143,20 @@ fn main() {
     let conf = get_default_configuration();
     let app = cli();
     let matches = app.get_matches();
+
+    if matches.is_present(CLI_DEFAULT_CONFIG_SUBC_NAME) {
+        let p = get_default_config_path();
+        return match create_default_config(p.clone()) {
+            Ok(path) => {
+                println!("Configuration file created at \"{}\"", path);
+                return ();
+            }
+            Err(e) => {
+                println!("Failed to create configuration file \"{}\": {}", p.to_str().unwrap(), e);
+                return ();
+            }
+        };
+    }
 
     let x = matches.value_of("color_mode").unwrap();
     let ft: FormatType = match x {
