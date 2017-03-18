@@ -2,7 +2,7 @@ FROM fedora:25
 
 LABEL maintainer="Tomas Tomecek <tomas@tomecek.net>"
 
-RUN dnf install -y curl tar gcc openssl-devel cmake make file libcurl-devel && \
+RUN dnf install -y curl tar gcc openssl-devel cmake make file libcurl-devel zsh && \
     dnf clean all
 
 # mostly copied from https://github.com/Scorpil/docker-rust/blob/master/nightly/Dockerfile

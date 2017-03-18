@@ -48,3 +48,8 @@ exec-test: target/debug/pretty-git-prompt
 	py.test-3 -vv tests
 	cargo test
 	$(shell cargo clippy || :)
+
+# compile and inject into container
+# open prompt with prepared git repo
+use-case-1:
+	$(UNSTABLE_CONTAINER_RUN) tests/functional/zsh.sh

@@ -47,3 +47,7 @@ def test_rwo_detached(tmpdir):
     with RWODetached(tmpdir) as r:
         assert r.run() == r.co_commit[:7]
 
+
+def test_merge_conflict(tmpdir):
+    with MergeConflict(tmpdir) as r:
+        assert r.run() == "merge|master↑1|✖1"

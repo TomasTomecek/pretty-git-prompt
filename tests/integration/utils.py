@@ -1,8 +1,8 @@
 import os
+import shutil
 import subprocess
+import tempfile
 
-def init_repo():
-    """ git init """
 
 class G():
     """ methods for creating git repositories """
@@ -90,7 +90,7 @@ class RWORemoteCommits(RepoWithOrigin):
     def do(self):
         super().do()
         with open("file.txt", "w") as f:
-            f.write("text2")
+            f.write("text3")
         subprocess.check_call(["git", "add", "file.txt"])
         subprocess.check_call(["git", "commit", "-m", "msg2"])
         subprocess.check_call(["git", "push", "-u", "origin", "master"])
@@ -104,3 +104,49 @@ class RWODetached(RWOLocalCommits):
         subprocess.check_call(["git", "checkout", self.co_commit, "--"])
 
 
+class MergeConflict(RWOLocalCommits):
+    def do(self):
+        super().do()
+
+        subprocess.check_call(["git", "checkout", "-b", "branch"])
+        subprocess.check_call(["git", "reset", "--hard", "HEAD^", "--"])
+        with open("file.txt", "w") as f:
+            f.write("text3")
+        subprocess.check_call(["git", "add", "file.txt"])
+        subprocess.check_call(["git", "commit", "-m", "this-will-conflict"])
+        subprocess.check_call(["git", "checkout", "master"])
+        subprocess.call(["git", "merge", "--ff", "branch"])
+
+
+class Everything(RWORemoteCommits):
+    def do(self):
+        super().do()
+        with open("file.txt", "a") as f:
+            f.write("\ntext4")
+        subprocess.check_call(["git", "add", "file.txt"])
+        subprocess.check_call(["git", "commit", "-m", "msg4"])
+        subprocess.check_call(["git", "remote", "add", "upstream", str(self.upstream.realpath())])
+        subprocess.check_call(["git", "push", "upstream", "master"])
+        with open("file.txt", "a") as f:
+            f.write("\ntext5")
+        subprocess.check_call(["git", "add", "file.txt"])
+        subprocess.check_call(["git", "commit", "-m", "msg5"])
+        with open("file.txt", "a") as f:
+            f.write("\ntext6")
+        subprocess.check_call(["git", "add", "file.txt"])
+        with open("file.txt", "a") as f:
+            f.write("\ntext7")
+        with open("file2.txt", "w") as f:
+            f.write("text")
+
+
+if __name__ == "__main__":
+    # used in functional test
+    d = tempfile.mkdtemp(dir=os.environ["HOME"])
+    import py
+    l = py.path.local(d)
+    try:
+        with Everything(l) as g:
+            subprocess.check_call(["zsh", "-i"])
+    finally:
+        shutil.rmtree(d)
