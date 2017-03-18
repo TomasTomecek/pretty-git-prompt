@@ -5,29 +5,33 @@ LABEL maintainer="Tomas Tomecek <tomas@tomecek.net>"
 RUN dnf install -y curl tar gcc openssl-devel cmake make file libcurl-devel zsh && \
     dnf clean all
 
-# mostly copied from https://github.com/Scorpil/docker-rust/blob/master/nightly/Dockerfile
-
 # beta, nightly, 1.15.1
-ARG RUST_CHANNEL=nightly
+# channel, channel + date, or an explicit version
+ARG RUST_SPEC=nightly
 ARG WITH_TEST="yes"
-ARG USER_ID="root"
+ARG USER_ID="1000"
 ARG RUST_BACKTRACE="1"
-ENV RUST_ARCHIVE=rust-$RUST_CHANNEL-x86_64-unknown-linux-gnu.tar.gz
-ENV RUST_DOWNLOAD_URL=https://static.rust-lang.org/dist/$RUST_ARCHIVE
 
-RUN set -x && mkdir /rust && cd /rust && \
-    curl -fsOSL $RUST_DOWNLOAD_URL && \
-    curl -s $RUST_DOWNLOAD_URL.sha256 | sha256sum -c - && \
-    tar -C /rust -xzf $RUST_ARCHIVE --strip-components=1 && \
-    ./install.sh && \
-    rm -rf /rust
+ENV HOME=/home/pretty
+RUN useradd -o -u ${USER_ID} -m pretty
+
+# https://static.rust-lang.org/dist/2017-03-16/rust-nightly-x86_64-unknown-linux-gnu.tar.gz
+RUN cd $HOME && curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --spec=$RUST_SPEC --verbose --disable-sudo
+
+# leave this here in case the script above breaks
+# ENV RUST_ARCHIVE=rust-$RUST_CHANNEL-x86_64-unknown-linux-gnu.tar.gz
+# ENV RUST_DOWNLOAD_URL=https://static.rust-lang.org/dist/$RUST_ARCHIVE
+# RUN set -x && mkdir /rust && cd /rust && \
+#     curl -fsOSL $RUST_DOWNLOAD_URL && \
+#     curl -s $RUST_DOWNLOAD_URL.sha256 | sha256sum -c - && \
+#     tar -C /rust -xzf $RUST_ARCHIVE --strip-components=1 && \
+#     ./install.sh && \
+#     rm -rf /rust
 
 RUN if [ $WITH_TEST == "yes" ] ; then \
     cargo install clippy || : && \
     dnf install -y git python3-pytest ; \
     fi
-
-RUN useradd -o -u ${USER_ID} -M -d /app pretty
 
 USER ${USER_ID}
 CMD ["/bin/bash"]
