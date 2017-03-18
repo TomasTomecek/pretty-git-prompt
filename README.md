@@ -1,1 +1,1 @@
-# git-stats
+# pretty-git-prompt
