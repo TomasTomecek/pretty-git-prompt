@@ -9,10 +9,12 @@ RUN dnf install -y curl tar gcc openssl-devel cmake make file libcurl-devel
 # beta, nightly, 1.15.1
 ARG RUST_CHANNEL=nightly
 ARG WITH_TEST="yes"
+ARG USER_ID="root"
+ARG RUST_BACKTRACE="1"
 ENV RUST_ARCHIVE=rust-$RUST_CHANNEL-x86_64-unknown-linux-gnu.tar.gz
 ENV RUST_DOWNLOAD_URL=https://static.rust-lang.org/dist/$RUST_ARCHIVE
 
-RUN mkdir /rust && cd /rust && \
+RUN set -x && mkdir /rust && cd /rust && \
     curl -fsOSL $RUST_DOWNLOAD_URL && \
     curl -s $RUST_DOWNLOAD_URL.sha256 | sha256sum -c - && \
     tar -C /rust -xzf $RUST_ARCHIVE --strip-components=1 && \
@@ -24,8 +26,11 @@ RUN if [ $WITH_TEST == "yes" ] ; then \
     dnf install -y git python3-pytest ; \
     fi
 
-# TODO: run as unprivileged user
+RUN useradd -o -u ${USER_ID} -M -d /app pretty
+
+USER ${USER_ID}
 CMD ["/bin/bash"]
+# this is still needed
 WORKDIR /app
 
 COPY . /app
