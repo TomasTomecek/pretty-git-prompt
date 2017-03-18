@@ -22,7 +22,7 @@ RUN set -x && mkdir /rust && cd /rust && \
     rm -rf /rust
 
 RUN if [ $WITH_TEST == "yes" ] ; then \
-    cargo install clippy && \
+    cargo install clippy || : && \
     dnf install -y git python3-pytest ; \
     fi
 
