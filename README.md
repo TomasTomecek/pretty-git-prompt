@@ -11,13 +11,13 @@ Beautiful prompt with info about your current git repository.
 This seems to be the minimal config required:
 
 ```shell
+export LC_ALL=en_US.UTF-8
 # Load colors.
 autoload -U colors
 colors
 # Allow for functions in the prompt.
 setopt PROMPT_SUBST
-local show_git_stats='$(pretty-git-prompt -m zsh)'
-RPROMPT="${show_git_stats}"
+RPROMPT='\$(pretty-git-prompt -m zsh)'
 ```
 
 Make sure that binary `pretty-git-prompt` is placed on your `$PATH`.
