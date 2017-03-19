@@ -11,8 +11,8 @@ DEPS=$(wildcard src/*.rs)
 CURRENT_USER="$(shell id -u)"
 STABLE_BUILD_IMAGE="${USER}/pretty-git-prompt"
 UNSTABLE_BUILD_IMAGE="${USER}/pretty-git-prompt:dev"
-STABLE_CONTAINER_RUN=docker run -v ${PWD}:/app:Z -v ~/.cargo/registry/:/home/pretty/.cargo/registry/:Z -ti $(STABLE_BUILD_IMAGE)
-UNSTABLE_CONTAINER_RUN=docker run -v ${PWD}:/app:Z -v ~/.cargo/registry/:/home/pretty/.cargo/registry/:Z -ti $(UNSTABLE_BUILD_IMAGE)
+STABLE_CONTAINER_RUN=docker run --rm -v ${PWD}:/app:Z -v ~/.cargo/registry/:/home/pretty/.cargo/registry/:Z -ti $(STABLE_BUILD_IMAGE)
+UNSTABLE_CONTAINER_RUN=docker run --rm -v ${PWD}:/app:Z -v ~/.cargo/registry/:/home/pretty/.cargo/registry/:Z -ti $(UNSTABLE_BUILD_IMAGE)
 
 default: build
 
