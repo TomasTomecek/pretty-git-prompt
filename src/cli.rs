@@ -12,9 +12,4 @@ pub fn cli<'a, 'b>() -> App<'a, 'b> {
         .about("Get `git status` inside your shell prompt.")
         .subcommand(SubCommand::with_name(CLI_DEFAULT_CONFIG_SUBC_NAME))
     //                             .about(def_conf_desc))
-        .arg(Arg::with_name("color_mode")
-             .long("color-mode")
-             .short("m")
-             .default_value("no")
-             .possible_values(&["zsh", "no"]))
 }

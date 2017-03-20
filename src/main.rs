@@ -7,9 +7,8 @@ extern crate yaml_rust;
 
 use backend::Backend;
 use cli::cli;
-use conf::{Conf,get_configuration,create_default_config};
+use conf::{Conf,get_configuration,create_default_config,Value,MonitoredRemote};
 use constants::*;
-use format::{Format,FormatType,FormatEntry};
 
 use git2::Repository;
 
@@ -17,85 +16,66 @@ mod backend;
 mod cli;
 mod conf;
 mod constants;
-mod format;
+
+
+fn format_value(value: Value, data: String) -> String {
+    format!("{}{}{}{}", value.pre_format, value.label, data, value.post_format)
+}
+
 
 
 // struct for displaying all the data -- the actual program
 struct Program {
     out: Vec<String>,
-    format: Format,
     backend: Backend,
     conf: Conf,
 }
 
 impl Program {
-    pub fn new(format_type: FormatType, backend: Backend, conf: Conf) -> Program {
+    pub fn new(backend: Backend, conf: Conf) -> Program {
         let out: Vec<String> = Vec::new();
-        Program { out: out, backend: backend, format: Format{ format_type: format_type }, conf: conf }
+        Program { out: out, backend: backend, conf: conf }
     }
 
     // add repository state to output buffer
     fn add_repository_state(&mut self) {
         let repo_state = self.backend.get_repository_state();
         if !repo_state.is_empty() {
-            let o = self.f(&repo_state, "");
-            self.out.push(o);
+            self.out.push(repo_state);
         }
     }
 
-    // master↑3↓4
-    fn add_local_branch_state(&mut self) {
-        let mut local: String = self.f(&self.backend.get_current_branch_name(), &self.conf.get_branch_color());
-        let (ahead, behind) = match self.backend.get_current_branch_ahead_behind() {
+    fn add_monitored_branches_state(&mut self) {
+        let mut local_branch: String = self.backend.get_current_branch_name();
+        let mr = match self.conf.get_remotes_monitoring() {
             Some(x) => x,
-            None => (0, 0),
+            None => return (),
         };
-        if ahead > 0 {
-            local += &self.f(
-                &format!("{}{}", self.conf.get_difference_ahead_symbol(), ahead),
-                &self.conf.get_remote_difference_color()
-            );
-        }
-        if behind > 0 {
-            local += &self.f(
-                &format!("{}{}", self.conf.get_difference_behind_symbol(), behind),
-                &self.conf.get_remote_difference_color()
-            );
-        }
-        self.out.push(local);
-    }
-
-    // upstream↑2↓1
-    fn add_remote_branches_state(&mut self) {
-        for (remote_name, branch_name) in self.conf.get_remotes_monitoring() {
-            let (ahead, behind) = match self.backend.get_remote_branch_ahead_behind(&remote_name, &branch_name) {
+        for monitored_remote in mr {
+            let b = match monitored_remote.branch {
+                Some(x) => x,
+                None => local_branch.clone()
+            };
+            let (ahead, behind) = match self.backend.get_remote_branch_ahead_behind(&monitored_remote.remote_name, &b) {
                 Some(x) => x,
                 None => (0, 0),
             };
             if ahead > 0 || behind > 0 {
-                let mut local: String = self.f(
-                    &format!("{}/{}", remote_name, branch_name),
-                    &self.conf.get_branch_color()
-                );
-                if ahead > 0 {
-                    local += &self.f(
-                        &format!("{}{}", self.conf.get_difference_ahead_symbol(), ahead),
-                        &self.conf.get_remote_difference_color()
-                    );
+                if let (Some(a_v), Some(b_v)) = (
+                    self.conf.get_difference_ahead_value(),
+                    self.conf.get_difference_behind_value()
+                ) {
+                    let mut local: String = format!("{}/{}", monitored_remote.remote_name, b);
+                    if ahead > 0 {
+                        local += &format_value(a_v, ahead.to_string());
+                    }
+                    if behind > 0 {
+                        local += &format_value(b_v, behind.to_string());
+                    }
+                    self.out.push(local);
                 }
-                if behind > 0 {
-                    local += &self.f(
-                        &format!("{}{}", self.conf.get_difference_behind_symbol(), behind),
-                        &self.conf.get_remote_difference_color()
-                    );
-                }
-                self.out.push(local);
             }
         }
-    }
-
-    fn f(&self, text: &str, color: &str) -> String {
-        self.format.format(FormatEntry{text: String::from(text), color: String::from(color)})
     }
 
     fn add_file_status(&mut self) {
@@ -104,16 +84,28 @@ impl Program {
                 let mut o = String::from("");
 
                 if let Some(x) = s.get(NEW_KEY) {
-                     o += &self.f(&format!("{}{}", self.conf.get_new_symbol(), x), &self.conf.get_new_color());
+                    match self.conf.get_new_value() {
+                        Some(y) => o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format),
+                        None => (),
+                    };
                 }
                 if let Some(x) = s.get(CHANGED_KEY) {
-                     o += &self.f(&format!("{}{}", self.conf.get_changed_symbol(), x), &self.conf.get_changed_color());
+                    match self.conf.get_changed_value() {
+                        Some(y) => o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format),
+                        None => (),
+                    };
                 }
                 if let Some(x) = s.get(STAGED_KEY) {
-                     o += &self.f(&format!("{}{}", self.conf.get_staged_symbol(), x), &self.conf.get_staged_color());
+                    match self.conf.get_staged_value() {
+                        Some(y) => o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format),
+                        None => (),
+                    };
                 }
                 if let Some(x) = s.get(CONFLICTS_KEY) {
-                     o += &self.f(&format!("{}{}", self.conf.get_conflicts_symbol(), x), &self.conf.get_conflicts_color());
+                    match self.conf.get_conflicts_value() {
+                        Some(y) => o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format),
+                        None => (),
+                    };
                 }
                 self.out.push(o);
             }
@@ -122,8 +114,7 @@ impl Program {
 
     fn populate(&mut self) {
         self.add_repository_state();
-        self.add_local_branch_state();
-        self.add_remote_branches_state();
+        self.add_monitored_branches_state();
         self.add_file_status();
     }
 
@@ -140,7 +131,7 @@ fn main() {
         Err(_) => return (),
     };
     let backend = Backend{ repo: repo };
-    let conf = get_configuration();
+    let conf = get_configuration(false);
     let app = cli();
     let matches = app.get_matches();
 
@@ -158,12 +149,7 @@ fn main() {
         };
     }
 
-    let x = matches.value_of("color_mode").unwrap();
-    let ft: FormatType = match x {
-        "zsh" => FormatType::Zsh,
-        "no" | _ => FormatType::NoColor,
-    };
-    let mut output = Program::new(ft, backend, conf);
+    let mut output = Program::new(backend, conf);
 
     output.populate();
     output.output();
