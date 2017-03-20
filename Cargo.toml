@@ -3,6 +3,11 @@ name = "pretty-git-prompt"
 version = "0.0.1"
 authors = ["Tomas Tomecek <tomas@tomecek.net>"]
 
+[[bin]]
+bench = false
+path = "src/main.rs"
+name = "pretty-git-prompt"
+
 [dependencies]
 git2 = "0.6"
 yaml-rust = "0.3.4"
