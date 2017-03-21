@@ -51,5 +51,10 @@ exec-test: target/debug/pretty-git-prompt
 
 # compile and inject into container
 # open prompt with prepared git repo
+# TODO: interactively run commands and see how prompt changes
 use-case-1:
 	$(UNSTABLE_CONTAINER_RUN) tests/functional/zsh.sh
+
+
+show-work:
+	egrep -C 3 "(TODO|FIXME)" $(DEPS) Makefile Dockerfile
