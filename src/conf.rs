@@ -247,6 +247,8 @@ pub fn create_default_config(path: PathBuf) -> Result<String, io::Error> {
 }
 
 
+// TODO: use 'expected' with should_panic
+// #[should_panic(expected = "assertion failed")]
 mod tests {
     use std::fs::{File,OpenOptions,remove_file};
     use std::io::{Write,Read};
