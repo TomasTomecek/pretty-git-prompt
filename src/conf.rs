@@ -49,8 +49,14 @@ values:
 # track history divergence
 monitor_remotes:
     origin:
+        # display the remote even if there is no difference with current branch (required), type bool
         display_if_uptodate: true
-        pre_format: '%{%F{blue}%}'
+        # this is displayed as: '[pre_format][value][post_format]'
+        # include coloring in pre_format and reset colors in post_format
+        # you can also include arbitrary string and substitute special values:
+        #  * <REMOTE> will be replaced with name of a remote
+        #  * <BRANCH> will be replaced with current branch name
+        pre_format: '%{%F{blue}%}<BRANCH>'
         post_format: '%{%f%}'
     # remote name (optional), type dict
     upstream:
@@ -58,12 +64,8 @@ monitor_remotes:
         # if omitted look for remotely tracked one
         # git branch --set-upstream-to
         branch: master
-        # prefix label (optional), type string
-        # if omitted display full text: $remote/$branch
-        # label: ''
-        # display the remote even if there is no difference with current branch (required), type bool
         display_if_uptodate: false
-        pre_format: '%{%F{green}%}'
+        pre_format: '%{%F{green}%}<REMOTE>'
         post_format: '%{%f%}'
 ";
 

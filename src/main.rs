@@ -9,6 +9,7 @@ use backend::Backend;
 use cli::cli;
 use conf::{Conf,get_configuration,create_default_config,Value,MonitoredRemote};
 use constants::*;
+use std::collections::HashMap;
 
 use git2::Repository;
 
@@ -20,6 +21,14 @@ mod constants;
 
 fn format_value(value: Value, data: String) -> String {
     format!("{}{}{}{}", value.pre_format, value.label, data, value.post_format)
+}
+
+fn substiute_special_values(s: String, values: &HashMap<String, String>) -> String {
+    let mut r:String = s.clone();
+    for (k, v) in values {
+        r = r.replace(k, &v);
+    }
+    r
 }
 
 
@@ -64,9 +73,14 @@ impl Program {
                     self.conf.get_difference_ahead_value(),
                     self.conf.get_difference_behind_value()
                 ) {
-                    let mut local: String = format!("{}{}/{}{}",
-                                                    monitored_remote.pre_format, monitored_remote.remote_name,
-                                                    b, monitored_remote.post_format);
+                    let mut special_values: HashMap<String, String> = HashMap::new();
+                    special_values.insert("<BRANCH>".to_string(), b);
+                    special_values.insert("<REMOTE>".to_string(), monitored_remote.remote_name);
+                    let mut local: String = format!(
+                        "{}{}",
+                        substiute_special_values(monitored_remote.pre_format, &special_values),
+                        substiute_special_values(monitored_remote.post_format, &special_values),
+                    );
                     if ahead > 0 {
                         local += &format_value(a_v, ahead.to_string());
                     }
