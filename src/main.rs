@@ -60,7 +60,7 @@ impl Program {
                 Some(x) => x,
                 None => (0, 0),
             };
-            if ahead > 0 || behind > 0 {
+            if monitored_remote.display_if_uptodate || ahead > 0 || behind > 0 {
                 if let (Some(a_v), Some(b_v)) = (
                     self.conf.get_difference_ahead_value(),
                     self.conf.get_difference_behind_value()

@@ -9,7 +9,6 @@ use constants::{get_default_config_path};
 use yaml_rust::{YamlLoader, Yaml};
 
 // TODO: supply different configs for different shells, default to no color
-// TODO: implement display_if_uptodate
 static DEFAULT_CONF: &'static str = "---
 # configuration of various values (required), type dict
 # if you omit a value, it won't be displayed
