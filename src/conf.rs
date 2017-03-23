@@ -50,6 +50,8 @@ values:
 monitor_remotes:
     origin:
         display_if_uptodate: true
+        pre_format: '%{%F{blue}%}'
+        post_format: '%{%f%}'
     # remote name (optional), type dict
     upstream:
         # remote branch name (optional), type string
@@ -61,6 +63,8 @@ monitor_remotes:
         # label: ''
         # display the remote even if there is no difference with current branch (required), type bool
         display_if_uptodate: false
+        pre_format: '%{%F{green}%}'
+        post_format: '%{%f%}'
 ";
 
 pub struct MonitoredRemote {
@@ -68,6 +72,8 @@ pub struct MonitoredRemote {
     pub branch: Option<String>,
     pub label: Option<String>,
     pub display_if_uptodate: bool,
+    pub pre_format: String,
+    pub post_format: String,
 }
 
 impl MonitoredRemote {
@@ -79,7 +85,28 @@ impl MonitoredRemote {
         }
         uptodate = display_if_uptodate.as_bool().unwrap();
 
-        let mut mr = MonitoredRemote{ remote_name: String::from(remote_name), branch: None, label: None, display_if_uptodate: uptodate };
+        let pre_format: String;
+        let ref pre_format_yaml = remote_config["pre_format"];
+        if pre_format_yaml.is_badvalue() || pre_format_yaml.is_null() {
+            panic!("'pre_format' key is required and has to be string");
+        }
+        pre_format = String::from(pre_format_yaml.as_str().unwrap());
+
+        let post_format: String;
+        let ref post_format_yaml = remote_config["post_format"];
+        if post_format_yaml.is_badvalue() || post_format_yaml.is_null() {
+            panic!("'post_format' key is required and has to be string");
+        }
+        post_format = String::from(post_format_yaml.as_str().unwrap());
+
+        let mut mr = MonitoredRemote{
+            remote_name: String::from(remote_name),
+            branch: None,
+            label: None,
+            display_if_uptodate: uptodate,
+            pre_format: pre_format,
+            post_format: post_format
+        };
 
         let ref branch = remote_config["branch"];
         if !(branch.is_badvalue() || branch.is_null()) {

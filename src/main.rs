@@ -23,7 +23,6 @@ fn format_value(value: Value, data: String) -> String {
 }
 
 
-
 // struct for displaying all the data -- the actual program
 struct Program {
     out: Vec<String>,
@@ -65,7 +64,9 @@ impl Program {
                     self.conf.get_difference_ahead_value(),
                     self.conf.get_difference_behind_value()
                 ) {
-                    let mut local: String = format!("{}/{}", monitored_remote.remote_name, b);
+                    let mut local: String = format!("{}{}/{}{}",
+                                                    monitored_remote.pre_format, monitored_remote.remote_name,
+                                                    b, monitored_remote.post_format);
                     if ahead > 0 {
                         local += &format_value(a_v, ahead.to_string());
                     }
