@@ -30,7 +30,7 @@ RUN cd $HOME && curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --spec
 
 RUN if [ $WITH_TEST == "yes" ] ; then \
     cargo install clippy || : && \
-    dnf install -y git python3-pytest ; \
+    dnf install -y git python3-pytest python3-pexpect ; \
     fi
 
 USER ${USER_ID}

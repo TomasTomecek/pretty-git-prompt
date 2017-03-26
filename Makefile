@@ -53,7 +53,7 @@ exec-test: target/debug/pretty-git-prompt
 # open prompt with prepared git repo
 # TODO: interactively run commands and see how prompt changes
 use-case-1:
-	$(UNSTABLE_CONTAINER_RUN) tests/functional/zsh.sh
+	$(UNSTABLE_CONTAINER_RUN) files/demo.py
 
 
 shell:
