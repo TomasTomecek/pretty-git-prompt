@@ -32,6 +32,10 @@ def test_repo_with_origin(tmpdir):
     with RepoWithOrigin(tmpdir) as r:
         assert r.run() == "master"
 
+def test_rwo_no_tracking(tmpdir):
+    with RWOWithoutTracking(tmpdir) as r:
+        # FIXME: this should not find the upstream branch
+        assert r.run() == "master"
 
 def test_rwo_local_commits(tmpdir):
     with RWOLocalCommits(tmpdir) as r:

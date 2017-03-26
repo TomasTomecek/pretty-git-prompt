@@ -4,9 +4,56 @@ import subprocess
 import tempfile
 
 
-class G():
-    """ methods for creating git repositories """
+def g(a):
+    subprocess.check_call(["git"] + a)
 
+def init_repo():
+    g(["init", "."])
+
+def add_file(filename):
+    g(["add", "-v", filename])
+
+def commit():
+    g(["commit", "-m", "mesáž"])
+
+def add_remote(name, path):
+    g(["remote", "add", name, path])
+
+def add_remote_origin(path):
+    add_remote("origin", path)
+
+def add_remote_upstream(path):
+    add_remote("upstream", path)
+
+def push(remote, branch, with_tracking=True):
+    c = ["push"]
+    if with_tracking:
+        c.append("-u")
+    c += [remote, branch]
+    g(c)
+
+def fetch():
+    g(["fetch", "-a"])
+
+def reset_hard(ref):
+    g(["reset", "--hard", ref])
+
+def checkout_ref(ref):
+    g(["checkout", ref, "--"])
+
+def checkout_b(branch_name):
+    g(["checkout", "-b", branch_name])
+
+def create_file(filename, content):
+    with open(filename, "w") as fd:
+        fd.write(content + "\r\n")
+
+def append_file(filename, content):
+    with open(filename, "a") as fd:
+        fd.write(content + "\r\n")
+
+
+class G():
     def __init__(self, tmpdir):
         self.tmpdir = tmpdir
         self.repo = tmpdir.mkdir("repo")
@@ -16,11 +63,9 @@ class G():
         subprocess.check_output(["git", "init", "--bare", str(self.upstream.realpath())])
         subprocess.check_output(["git", "config", "--global", "user.email", "pretty-git-prompt@example.com"])
         subprocess.check_output(["git", "config", "--global", "user.name", "Git \"Pretty\" Prompter"])
-
-        self.cwd = None
+        self.cwd = self.repo.chdir()
 
     def __enter__(self):
-        self.cwd = self.repo.chdir()
         self.do()  # first __init__, then __enter__
         return self
 
@@ -32,121 +77,97 @@ class G():
 
     def run(self):
         """ run program, return output """
-        binary_path = os.path.join(str(self.cwd), "target/debug/pretty-git-prompt")
-        if not os.path.exists(binary_path):
-            binary_path = os.path.join(str(self.cwd), "target/release/pretty-git-prompt")
-        return subprocess.check_output([binary_path]).decode("utf-8").rstrip()
+        return subprocess.check_output(["pretty-git-prompt"]).decode("utf-8").rstrip()
 
 
 class BareRepo(G):
     def do(self):
-        subprocess.check_call(["git", "init", "."])
+        init_repo()
 
 
 class SimpleUntrackedFilesRepo(BareRepo):
     def do(self):
         super().do()
-        with open("file.txt", "w+") as f:
-            f.write("text")
+        create_file("file.txt", "text")
 
 
 class SimpleChangedFilesRepo(SimpleUntrackedFilesRepo):
     def do(self):
         super().do()
-        subprocess.check_call(["git", "add", "file.txt"])
+        add_file("file.txt")
 
 
 class SimpleRepo(SimpleChangedFilesRepo):
     def do(self):
         super().do()
-        subprocess.check_call(["git", "commit", "-m", "msg"])
+        commit()
 
 
 class SimpleDirtyWithCommitRepo(SimpleRepo):
     def do(self):
         super().do()
-        with open("file.txt", "w+") as f:
-            f.write("text2")
+        create_file("file.txt", "text2")
 
 
 class RepoWithOrigin(SimpleRepo):
     def do(self):
         super().do()
-        subprocess.check_call(["git", "remote", "add", "origin", str(self.origin.realpath())])
+        add_remote_origin(str(self.origin.realpath()))
+
+
+class RWOWithoutTracking(RepoWithOrigin):
+    def do(self):
+        super().do()
+        push("origin", "master", with_tracking=False)
+        create_file("file.txt", "text3")
+        add_file("file.txt")
+        commit()
 
 
 class RWOLocalCommits(RepoWithOrigin):
     def do(self):
         super().do()
-        subprocess.check_call(["git", "push", "-u", "origin", "master"])
-        with open("file.txt", "w") as f:
-            f.write("text2")
-        subprocess.check_call(["git", "add", "file.txt"])
-        subprocess.check_call(["git", "commit", "-m", "msg2"])
-        subprocess.check_call(["git", "fetch", "origin"])
+        push("origin", "master")
+        create_file("file.txt", "text3")
+        add_file("file.txt")
+        commit()
 
 
 class RWORemoteCommits(RepoWithOrigin):
     def do(self):
         super().do()
-        with open("file.txt", "w") as f:
-            f.write("text3")
-        subprocess.check_call(["git", "add", "file.txt"])
-        subprocess.check_call(["git", "commit", "-m", "msg2"])
-        subprocess.check_call(["git", "push", "-u", "origin", "master"])
-        subprocess.check_call(["git", "reset", "--hard", "HEAD^"])
+        create_file("file.txt", "text4")
+        add_file("file.txt")
+        commit()
+        push("origin", "master")
+        reset_hard("HEAD^")
 
 
 class RWODetached(RWOLocalCommits):
     def do(self):
         super().do()
         self.co_commit = subprocess.check_output(["git", "rev-parse", "HEAD^"]).decode("utf-8").rstrip()
-        subprocess.check_call(["git", "checkout", self.co_commit, "--"])
+        checkout_ref(self.co_commit)
 
 
 class MergeConflict(RWOLocalCommits):
     def do(self):
         super().do()
-
-        subprocess.check_call(["git", "checkout", "-b", "branch"])
-        subprocess.check_call(["git", "reset", "--hard", "HEAD^", "--"])
-        with open("file.txt", "w") as f:
-            f.write("text3")
-        subprocess.check_call(["git", "add", "file.txt"])
-        subprocess.check_call(["git", "commit", "-m", "this-will-conflict"])
-        subprocess.check_call(["git", "checkout", "master"])
+        checkout_b("branch")
+        reset_hard("HEAD^")
+        create_file("file.txt", "text5")
+        add_file("file.txt")
+        commit()
+        checkout_ref("master")
         subprocess.call(["git", "merge", "--ff", "branch"])
-
-
-class Everything(RWORemoteCommits):
-    def do(self):
-        super().do()
-        with open("file.txt", "a") as f:
-            f.write("\ntext4")
-        subprocess.check_call(["git", "add", "file.txt"])
-        subprocess.check_call(["git", "commit", "-m", "msg4"])
-        subprocess.check_call(["git", "remote", "add", "upstream", str(self.upstream.realpath())])
-        subprocess.check_call(["git", "push", "upstream", "master"])
-        with open("file.txt", "a") as f:
-            f.write("\ntext5")
-        subprocess.check_call(["git", "add", "file.txt"])
-        subprocess.check_call(["git", "commit", "-m", "msg5"])
-        with open("file.txt", "a") as f:
-            f.write("\ntext6")
-        subprocess.check_call(["git", "add", "file.txt"])
-        with open("file.txt", "a") as f:
-            f.write("\ntext7")
-        with open("file2.txt", "w") as f:
-            f.write("text")
 
 
 if __name__ == "__main__":
     # used in functional test
     d = tempfile.mkdtemp(dir=os.environ["HOME"])
-    import py
     l = py.path.local(d)
     try:
-        with Everything(l) as g:
-            subprocess.check_call(["zsh", "-i"])
+        with MergeConflict(l) as g:
+            pass
     finally:
         shutil.rmtree(d)
