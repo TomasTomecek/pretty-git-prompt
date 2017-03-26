@@ -56,5 +56,8 @@ use-case-1:
 	$(UNSTABLE_CONTAINER_RUN) tests/functional/zsh.sh
 
 
+shell:
+	$(UNSTABLE_CONTAINER_RUN) zsh -l
+
 show-work:
 	egrep -C 3 "(TODO|FIXME)" $(DEPS) Makefile Dockerfile
