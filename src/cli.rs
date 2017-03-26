@@ -11,5 +11,10 @@ pub fn cli<'a, 'b>() -> App<'a, 'b> {
         .author("Tomas Tomecek <tomas@tomecek.net>")
         .about("Get `git status` inside your shell prompt.")
         .subcommand(SubCommand::with_name(CLI_DEFAULT_CONFIG_SUBC_NAME))
-    //                             .about(def_conf_desc))
+        .arg(Arg::with_name("config")
+             .short("c")
+             .long("config")
+             .value_name("FILE")
+             .help("Use the given config file.")
+             .takes_value(true))
 }

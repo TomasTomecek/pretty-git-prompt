@@ -146,9 +146,15 @@ fn main() {
         Err(_) => return (),
     };
     let backend = Backend{ repo: repo };
-    let conf = get_configuration(false);
     let app = cli();
     let matches = app.get_matches();
+
+    let mut conf_path: Option<String> = None;
+    if matches.is_present("config") {
+        conf_path = Some(String::from(matches.value_of("config").unwrap()));
+    }
+
+    let conf = get_configuration(conf_path);
 
     if matches.is_present(CLI_DEFAULT_CONFIG_SUBC_NAME) {
         let p = get_default_config_path();

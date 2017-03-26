@@ -8,7 +8,7 @@ use constants::{get_default_config_path};
 
 use yaml_rust::{YamlLoader, Yaml};
 
-// TODO: supply different configs for different shells, default to no color
+// TODO: remove label key, merge with pre, post
 static DEFAULT_CONF: &'static str = "---
 # configuration of various values (required), type dict
 # if you omit a value, it won't be displayed
@@ -22,28 +22,28 @@ values:
         # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Visual-effects
         # TODO: bash
         # TODO: fish?
-        pre_format: '%{%F{014}%}'
-        post_format: '%{%f%}'
+        pre_format: ''
+        post_format: ''
     changed:
         label: 'Δ'
-        pre_format: '%{%B%F{red}%}'
-        post_format: '%{%b%f%}'
+        pre_format: ''
+        post_format: ''
     staged:
         label: '▶'
-        pre_format: '%{%F{green}%}'
-        post_format: '%{%f%}'
+        pre_format: ''
+        post_format: ''
     conflicts:
         label: '✖'
-        pre_format: '%{%F{yellow}%}'
-        post_format: '%{%f%}'
+        pre_format: ''
+        post_format: ''
     difference_ahead:
         label: '↑'
-        pre_format: '%{%F{white}%}'
-        post_format: '%{%f%}'
+        pre_format: ''
+        post_format: ''
     difference_behind:
         label: '↓'
-        pre_format: '%{%F{white}%}'
-        post_format: '%{%f%}'
+        pre_format: ''
+        post_format: ''
 
 # monitor status against different remotes (optional), type dict
 # track history divergence
@@ -56,8 +56,8 @@ monitor_remotes:
         # you can also include arbitrary string and substitute special values:
         #  * <REMOTE> will be replaced with name of a remote
         #  * <BRANCH> will be replaced with current branch name
-        pre_format: '%{%F{blue}%}<BRANCH>'
-        post_format: '%{%f%}'
+        pre_format: '<BRANCH>'
+        post_format: ''
     # remote name (optional), type dict
     upstream:
         # remote branch name (optional), type string
@@ -65,8 +65,8 @@ monitor_remotes:
         # git branch --set-upstream-to
         branch: master
         display_if_uptodate: false
-        pre_format: '%{%F{green}%}<REMOTE>'
-        post_format: '%{%f%}'
+        pre_format: '<REMOTE>'
+        post_format: ''
 ";
 
 pub struct MonitoredRemote {
@@ -219,8 +219,7 @@ impl Conf {
     }
 }
 
-pub fn load_configuration_from_file() -> Result<String, io::Error> {
-    let path = get_default_config_path();
+pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
     let mut file = match File::open(path) {
         Ok(f) => f,
         Err(e) => return Err(e)
@@ -232,14 +231,19 @@ pub fn load_configuration_from_file() -> Result<String, io::Error> {
     }
 }
 
-// TODO: allow overriding config from CLI
-pub fn get_configuration(force_default_config: bool) -> Conf {
+pub fn get_configuration(supplied_conf_path: Option<String>) -> Conf {
     let mut content: String;
-    if force_default_config {
-        content = String::from(DEFAULT_CONF);
+    if supplied_conf_path.is_some() {
+        content = match load_configuration_from_file(supplied_conf_path.unwrap()) {
+            Ok(c) => c,
+            Err(e) => {
+                println!("ERROR");
+                panic!("Couldn't open configuration file: {:?}", e);
+            }
+        };
     } else {
-        content = match load_configuration_from_file() {
-            Ok(f) => f,
+        content = match load_configuration_from_file(get_default_config_path()) {
+            Ok(c) => c,
             Err(e) => {
                 let kind = e.kind();
                 if kind == io::ErrorKind::NotFound {
