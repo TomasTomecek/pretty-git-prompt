@@ -149,8 +149,7 @@ fn main() {
     let debug_enabled = matches.is_present("debug");
     if debug_enabled { println!("Debug messages are enabled."); }
 
-    // FIXME: doesn't work when there is no .git inside .
-    let repo = match Repository::open(".") {
+    let repo = match Repository::discover(".") {
         Ok(repo) => repo,
         // not a git repository, ignore
         Err(e) => {
