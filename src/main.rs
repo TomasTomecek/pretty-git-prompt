@@ -1,6 +1,3 @@
-// TODO:
-//  * add option to debug: print all errors
-
 extern crate clap;
 extern crate git2;
 extern crate yaml_rust;
@@ -9,10 +6,14 @@ use backend::Backend;
 use cli::cli;
 use conf::{Conf,get_configuration,create_default_config,Value,MonitoredRemote};
 use constants::*;
+
 use std::collections::HashMap;
 
 use git2::Repository;
 
+// util mod def needs to be first b/c of macro definitions and usage in other modules
+#[macro_use]
+mod util;
 mod backend;
 mod cli;
 mod conf;
@@ -37,12 +38,13 @@ struct Program {
     out: Vec<String>,
     backend: Backend,
     conf: Conf,
+    debug: bool
 }
 
 impl Program {
-    pub fn new(backend: Backend, conf: Conf) -> Program {
+    pub fn new(backend: Backend, conf: Conf, debug: bool) -> Program {
         let out: Vec<String> = Vec::new();
-        Program { out: out, backend: backend, conf: conf }
+        Program { out: out, backend: backend, conf: conf, debug: debug }
     }
 
     // add repository state to output buffer
@@ -135,19 +137,26 @@ impl Program {
 
     // print output buffer
     fn output(&self) {
-        // println!("{}", out.len());
+        log!(self, "# of blocks = {}", self.out.len());
         println!("{}", self.out.join("|"));
     }
 }
 
 fn main() {
-    let repo = match Repository::open(".") {
-        Ok(repo) => repo,
-        Err(_) => return (),
-    };
-    let backend = Backend{ repo: repo };
     let app = cli();
     let matches = app.get_matches();
+
+    let debug_enabled = matches.is_present("debug");
+    if debug_enabled { println!("Debug messages are enabled."); }
+
+    let repo = match Repository::open(".") {
+        Ok(repo) => repo,
+        // not a git repository, ignore
+        Err(e) => {
+            if debug_enabled { println!("This is not a git repository: {:?}", e); }
+            return ();
+        }
+    };
 
     let mut conf_path: Option<String> = None;
     if matches.is_present("config") {
@@ -170,7 +179,8 @@ fn main() {
         };
     }
 
-    let mut output = Program::new(backend, conf);
+    let backend = Backend{ repo: repo, debug: debug_enabled };
+    let mut output = Program::new(backend, conf, debug_enabled);
 
     output.populate();
     output.output();

@@ -17,4 +17,8 @@ pub fn cli<'a, 'b>() -> App<'a, 'b> {
              .value_name("FILE")
              .help("Use the given config file.")
              .takes_value(true))
+        .arg(Arg::with_name("debug")
+             .short("d")
+             .long("debug")
+             .help("Print debug messages, useful for identifying issues."))
 }

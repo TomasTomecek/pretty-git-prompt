@@ -17,6 +17,7 @@ fn get_branch_remote(reference: Reference) -> Option<Oid> {
 
 pub struct Backend {
     pub repo: Repository,
+    pub debug: bool
 }
 
 impl Backend {
@@ -26,7 +27,10 @@ impl Backend {
             Err(_) => {
                 match self.repo.find_reference("HEAD") {
                     Ok(x) => Some(x),
-                    Err(_) => None,
+                    Err(e) => {
+                        log!(self, "reference HEAD: {}", e);
+                        return None
+                    },
                 }
             },
         }
@@ -36,7 +40,10 @@ impl Backend {
         let head = self.get_head();
         match head {
             Some(v) => v.target(),
-            None => None,
+            None => {
+                log!(self, "Failed to find Oid for HEAD.");
+                return None
+            },
         }
     }
 
@@ -46,26 +53,36 @@ impl Backend {
         let h = match self.get_head() {
             Some(v) => {
                 match v.resolve() {
-                    Ok(y) => y,
-                    Err(_) => v
+                    Ok(y) => {
+                        log!(self, "Branch name is {:?}", y.name());
+                        y
+                    },
+                    Err(e) => {
+                        log!(self, "Branch name is {:?}, error: {:?}", v.name(), e);
+                        v
+                    }
                 }
             }
-            None => return blank,
+            None => {
+                log!(self, "No branch name found");
+                return blank;
+            }
         };
 
-        let s = h.shorthand();
-        if s.is_some() {
-            let ref_name = s.unwrap();
-            if ref_name != "HEAD" {
-                return ref_name.to_string();
+        if let Some(ref_name_string) = h.shorthand() {
+            if ref_name_string != "HEAD" {
+                let s = ref_name_string.to_string();
+                log!(self, "Ref name is: {}", s);
+                return s;
             } else {
-                let ref_name = h.symbolic_target();
-                if ref_name.is_some() {
-                    let ref_name_string = ref_name.unwrap().to_string();
+                if let Some(ref_name) = h.symbolic_target() {
+                    let ref_name_string = ref_name.to_string();
+                    log!(self, "Ref name is: {}", ref_name_string);
                     let mut path: Vec<&str> = ref_name_string.split('/').collect();
-                    let branch_short = path.pop();
-                    if branch_short.is_some() {
-                        return branch_short.unwrap().to_string();
+                    if let Some(branch_short) = path.pop() {
+                        let s = branch_short.to_string();
+                        log!(self, "Ref name is: {}", s);
+                        return s
                     }
                 }
             }
@@ -93,7 +110,11 @@ impl Backend {
     pub fn get_current_branch_ahead_behind(&self) -> Option<(usize, usize)> {
         let rm_oid = match self.get_current_branch_remote_oid() {
             Some(r) => r,
-            None => return None
+            None => {
+                log!(self, "Can't find remote counterpart of current branch.");
+                return None
+            },
+
         };
         let oid = match self.get_current_branch_oid() {
             Some(r) => r,
@@ -126,6 +147,7 @@ impl Backend {
         }
     }
 
+    // TODO: use branch tracking here
     fn find_remote_branch(&self, remote_name: &str, branch_name: &str) -> Result<Branch, Error> {
         let cur_branch_name = self.get_current_branch_name();
         let b = match branch_name {
@@ -142,14 +164,17 @@ impl Backend {
         opts.include_untracked(true);
         match self.repo.statuses(Some(&mut opts)) {
             Ok(s) => Some(s),
-            Err(_) => None,
+            Err(e) => {
+                log!(self, "Unable to get status of repository: {:?}", e);
+                None
+            }
         }
     }
 
     pub fn get_repository_state(&self) -> String {
         let state = self.repo.state();
         match state {
-            RepositoryState::Clean => String::from(""),
+            RepositoryState::Clean => String::from(""),  // XXX: this seems to be hardcoded
             RepositoryState::Merge => String::from("merge"),
             RepositoryState::Revert | RepositoryState::RevertSequence => String::from("revert"),
             RepositoryState::CherryPick | RepositoryState::CherryPickSequence => String::from("cherry-pick"),
@@ -174,7 +199,7 @@ impl Backend {
 
         for s in statuses.iter() {
             let file_status = s.status();
-            // println!("{}", s.path().unwrap());
+            log!(self, "{}", s.path().unwrap());
 
             if file_status.intersects(changed) {
                 let counter = d.entry(CHANGED_KEY).or_insert(0);
@@ -196,5 +221,3 @@ impl Backend {
         Some(d)
     }
 }
-
-
