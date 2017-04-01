@@ -3,6 +3,10 @@ import shutil
 import subprocess
 import tempfile
 
+def d():
+    """ debug via running shell; need to run py.test with -s """
+    subprocess.call(["zsh", "-i"])
+
 
 def g(a):
     subprocess.check_call(["git"] + a)
