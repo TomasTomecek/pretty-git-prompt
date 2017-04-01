@@ -1,32 +1,58 @@
+// TODO: cache values: Create new struct and use it within Backend
+
 use std::collections::HashMap;
 
+use conf::{RemoteBranch};
 use constants::{CHANGED_KEY,NEW_KEY,STAGED_KEY,CONFLICTS_KEY};
 
 use git2::*;
 
 
-fn get_branch_remote(reference: Reference) -> Option<Oid> {
-    let b = Branch::wrap(reference);
-    let upstream = match b.upstream() {
-        Ok(u) => u,
-        Err(_) => return None,
-    };
-    upstream.get().target()
-}
-
-
 pub struct Backend {
     pub repo: Repository,
-    pub debug: bool
+    pub debug: bool,
+    pub current_branch_name: Option<String>  // cache
 }
 
+pub struct BranchAheadBehind {
+    pub local_branch_name: Option<String>,
+    pub remote_branch_name: Option<String>,
+    pub remote_name: Option<String>,
+    pub ahead: usize,
+    pub behind: usize
+}
+
+impl BranchAheadBehind {
+    fn new(l: Option<String>) -> BranchAheadBehind {
+        BranchAheadBehind{ local_branch_name: l, remote_branch_name: None, remote_name: None,
+                           ahead: 0, behind: 0 }
+    }
+}
+
+
+#[derive(Clone)]
+struct RefPair {
+    remote_name: String,
+    branch_name: String,
+    oid: Oid,
+}
+
+
 impl Backend {
+    pub fn new(repo: Repository, debug: bool) -> Backend {
+        Backend{ repo: repo, debug: debug, current_branch_name: None }
+    }
+
     fn get_head(&self) -> Option<Reference> {
         match self.repo.head() {
             Ok(head) => Some(head),
-            Err(_) => {
+            Err(e2) => {
+                log!(self, "Can't get HEAD: {}", e2);
                 match self.repo.find_reference("HEAD") {
-                    Ok(x) => Some(x),
+                    Ok(x) => {
+                        log!(self, "Found HEAD directly: {:?}", x.name());
+                        Some(x)
+                    },
                     Err(e) => {
                         log!(self, "reference HEAD: {}", e);
                         return None
@@ -47,10 +73,9 @@ impl Backend {
         }
     }
 
-    // TODO: return Option
-    pub fn get_current_branch_name(&self) -> String {
-        let blank = String::from("");
-        let h = match self.get_head() {
+    fn resolve_symbolic_reference<'a>(&self, reference: Option<Reference<'a>>) -> Option<Reference<'a>> {
+        return reference;
+        let s_reference = match reference {
             Some(v) => {
                 match v.resolve() {
                     Ok(y) => {
@@ -65,97 +90,173 @@ impl Backend {
             }
             None => {
                 log!(self, "No branch name found");
-                return blank;
+                return None;
             }
         };
+        Some(s_reference)
+    }
 
-        if let Some(ref_name_string) = h.shorthand() {
+    fn get_branch_name_for_reference(&self, r: Reference) -> Option<String> {
+        if let Some(ref_name_string) = r.shorthand() {
             if ref_name_string != "HEAD" {
                 let s = ref_name_string.to_string();
-                log!(self, "Ref name is: {}", s);
-                return s;
+                log!(self, "Shorthand for reference is: {}", s);
+                return Some(s);
             } else {
-                if let Some(ref_name) = h.symbolic_target() {
+                if let Some(ref_name) = r.symbolic_target() {
                     let ref_name_string = ref_name.to_string();
-                    log!(self, "Ref name is: {}", ref_name_string);
+                    log!(self, "shorthand = HEAD, links to: {}", ref_name_string);
                     let mut path: Vec<&str> = ref_name_string.split('/').collect();
                     if let Some(branch_short) = path.pop() {
                         let s = branch_short.to_string();
-                        log!(self, "Ref name is: {}", s);
-                        return s
+                        log!(self, "Last part of full name is: {}", s);
+                        return Some(s);
                     }
                 }
             }
         }
 
-        let hash = match h.target() {
-            Some(v) => v.to_string(),
-            None => blank,
-        };
-        if hash.len() >= 8 {
-            let (s, _) = hash.split_at(7);
-            s.to_string()
-        } else {
-            hash
+        match r.target() {
+            Some(v) => {
+                let hash_str = v.to_string();
+                if hash_str.len() >= 8 {
+                    let (s, _) = hash_str.split_at(7);
+                    Some(s.to_string())
+                } else {
+                    Some(hash_str)
+                }
+            },
+            None => None,
         }
     }
 
-    fn get_current_branch_remote_oid(&self) -> Option<Oid> {
+    fn set_current_branch_name(&mut self, n: Option<String>) {
+        self.current_branch_name = n;
+    }
+
+    pub fn get_current_branch_name(&mut self) -> Option<String> {
+        if self.current_branch_name.is_some() {
+            return self.current_branch_name.clone();
+        }
+        let mut head: Option<Reference> = None;
+        if head.is_none() {
+            head = self.get_head();
+        }
+        let h = match self.resolve_symbolic_reference(head) {
+            Some(v) => v,
+            None => return None,
+        };
+        let current_branch_name = self.get_branch_name_for_reference(h);
+        current_branch_name
+    }
+
+    fn get_branch_remote(&self, reference: Reference) -> Option<RefPair> {
+        let b = Branch::wrap(reference);
+        let upstream = match b.upstream() {
+            Ok(u) => u,
+            Err(e) => {
+                log!(self, "Can't get upstream branch for {:?}", b.name());
+                return None;
+            }
+        };
+        let branch_name = match upstream.name() {
+            Ok(o_n) => match o_n {
+                Some(n) => n,
+                None => {
+                    log!(self, "Invalid branch name");
+                    return None;
+                },
+            },
+            Err(e) => {
+                log!(self, "Error while getting name for upstream branch");
+                return None;
+            }
+        };
+        let upstream_reference = upstream.get();
+        let oid = match upstream_reference.target() {
+            Some(o) => o,
+            None => {
+                log!(self, "Can't get oid of upstream branch");
+                return None;
+            }
+        };
+        let remote_name = match upstream_reference.name() {
+            Some(n) => {
+                let v: Vec<&str> = n.splitn(3, "/").collect();
+                if v.len() >= 3 {
+                    v[1]
+                } else {
+                    log!(self, "Can't figure out remote name: {:?}", v);
+                    return None;
+                }
+            },
+            None => {
+                log!(self, "Can't get full name of upstream branch.");
+                return None;
+            }
+        };
+        Some(RefPair{ remote_name: remote_name.to_string(),
+                      branch_name: branch_name.to_string(), oid: oid })
+    }
+
+    fn get_current_branch_remote_oid(&self) -> Option<RefPair> {
         match self.get_head() {
-            Some(r) => get_branch_remote(r),
+            Some(r) => self.get_branch_remote(r),
             None => None
         }
     }
 
-    pub fn get_current_branch_ahead_behind(&self) -> Option<(usize, usize)> {
-        let rm_oid = match self.get_current_branch_remote_oid() {
-            Some(r) => r,
-            None => {
-                log!(self, "Can't find remote counterpart of current branch.");
-                return None
+    pub fn get_branch_ahead_behind(&mut self, remote_branch: Option<RemoteBranch>) -> Option<BranchAheadBehind> {
+        let current_branch_name = self.get_current_branch_name();
+        log!(self, "Current branch name = {:?}", current_branch_name);
+        let mut ab = BranchAheadBehind::new(current_branch_name);
+        let ref_pair_option = self.get_remote_branch(remote_branch);
+        let ref_pair = match ref_pair_option {
+            Some(u) => {
+                u.clone()
             },
-
+            None => return Some(ab),
         };
+        ab.remote_branch_name = Some(ref_pair.branch_name.clone());
+        ab.remote_name = Some(ref_pair.remote_name);
+
         let oid = match self.get_current_branch_oid() {
             Some(r) => r,
             None => return None
         };
-        let res = self.repo.graph_ahead_behind(oid, rm_oid);
+        let res = self.repo.graph_ahead_behind(oid, ref_pair.oid);
         match res {
-            Ok(r) => Some(r),
-            Err(_) => None
-        }
+            Ok((a, b)) => {
+                ab.ahead = a;
+                ab.behind = b;
+            },
+            Err(e) => {
+                log!(self, "Can't get ahead & behind stats for branch {}", ref_pair.branch_name);
+            }
+        };
+        Some(ab)
     }
 
-    pub fn get_remote_branch_ahead_behind(&self, remote_name: &str, branch_name: &str) -> Option<(usize, usize)>  {
-        let remote_reference = match self.find_remote_branch(remote_name, branch_name) {
-            Ok(u) => u.into_reference(),
-            Err(_) => return None,
-        };
-        let remote_reference_oid = match remote_reference.target() {
-            Some(u) => u,
-            None => return None,
-        };
-        let oid = match self.get_current_branch_oid() {
-            Some(r) => r,
-            None => return None
-        };
-        let res = self.repo.graph_ahead_behind(oid, remote_reference_oid);
-        match res {
-            Ok(r) => Some(r),
-            Err(_) => None
+    // find remote branch if branch_name is specified
+    // if not, get remote tracking branch for current branch
+    fn get_remote_branch(&self, remote_branch: Option<RemoteBranch>) -> Option<RefPair> {
+        match remote_branch {
+            Some(b) => {
+                match self.repo.find_branch(&b.remote_branch, BranchType::Remote) {
+                    Ok(o) => Some(RefPair{ branch_name: b.remote_branch_name,
+                                           remote_name: b.remote_name,
+                                           oid: o.into_reference().target().unwrap() }),
+                    Err(e) => {
+                        // don't panic here - it doesn't exist, we don't care
+                        log!(self, "No remote branch found for {}", b.remote_branch_name);
+                        None
+                    }
+                }
+            },
+            None => {
+                self.get_current_branch_remote_oid()
+            }
         }
-    }
-
-    // TODO: use branch tracking here
-    fn find_remote_branch(&self, remote_name: &str, branch_name: &str) -> Result<Branch, Error> {
-        let cur_branch_name = self.get_current_branch_name();
-        let b = match branch_name {
-            x if x.is_empty() => &cur_branch_name,
-            y => y
-        };
-        let remote_branch_name = format!("{}/{}", remote_name, b);
-        self.repo.find_branch(&remote_branch_name, BranchType::Remote)
     }
 
     pub fn get_status(&self) -> Option<Statuses> {

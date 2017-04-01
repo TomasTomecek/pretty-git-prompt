@@ -9,6 +9,7 @@ use constants::{get_default_config_path};
 use yaml_rust::{YamlLoader, Yaml};
 
 // TODO: remove label key, merge with pre, post
+// TODO: add version
 static DEFAULT_CONF: &'static str = "---
 # configuration of various values (required), type dict
 # if you omit a value, it won't be displayed
@@ -48,38 +49,50 @@ values:
 # monitor status against different remotes (optional), type dict
 # track history divergence
 monitor_remotes:
-    origin:
-        # display the remote even if there is no difference with current branch (required), type bool
-        display_if_uptodate: true
-        # this is displayed as: '[pre_format][value][post_format]'
-        # include coloring in pre_format and reset colors in post_format
-        # you can also include arbitrary string and substitute special values:
-        #  * <REMOTE> will be replaced with name of a remote
-        #  * <BRANCH> will be replaced with current branch name
-        pre_format: '<BRANCH>'
-        post_format: ''
-    # remote name (optional), type dict
-    upstream:
-        # remote branch name (optional), type string
-        # if omitted look for remotely tracked one
-        # git branch --set-upstream-to
-        branch: master
-        display_if_uptodate: false
-        pre_format: '<REMOTE>'
-        post_format: ''
+      # formatting (required), both are required
+      # this is displayed as: '[pre_format][value][post_format]'
+      # include coloring in pre_format and reset colors in post_format
+      # you can also include arbitrary string
+      # there are some special values which are substituted:
+      #  * <REMOTE> will be replaced with name of a remote
+      #  * <LOCAL_BRANCH> will be replaced with current branch name
+      #  * <REMOTE_BRANCH> will be replaced with name of remote branch
+    - pre_format: '<LOCAL_BRANCH>'
+      post_format: ''
+      # remote branch name (optional), type string
+      # example: 'upstream/mater'
+      # if omitted look for remotely tracked branch usualy set up with:
+      #   git branch --set-upstream-to
+      # remote_branch: ''
+      # display the remote even if there is no difference with current branch (required), type bool
+      display_if_uptodate: true
+    - remote_branch: 'upstream/master'
+      display_if_uptodate: false
+      pre_format: '<REMOTE>'
+      post_format: ''
 ";
 
-pub struct MonitoredRemote {
+#[derive(Debug, Clone)]
+pub struct RemoteBranch {
+    // upstream/master
+    // this is the name git is using
+    pub remote_branch: String,
+    // master
+    pub remote_branch_name: String,
+    // upstream
     pub remote_name: String,
-    pub branch: Option<String>,
-    pub label: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MonitoredRemote {
+    pub remote_branch: Option<RemoteBranch>,
     pub display_if_uptodate: bool,
     pub pre_format: String,
     pub post_format: String,
 }
 
 impl MonitoredRemote {
-    fn new(remote_config: &Yaml, remote_name: &str) -> MonitoredRemote {
+    fn new(remote_config: &Yaml) -> MonitoredRemote {
         let uptodate: bool;
         let ref display_if_uptodate = remote_config["display_if_uptodate"];
         if display_if_uptodate.is_badvalue() || display_if_uptodate.is_null() {
@@ -101,24 +114,25 @@ impl MonitoredRemote {
         }
         post_format = String::from(post_format_yaml.as_str().unwrap());
 
+        let mut rb: Option<RemoteBranch> = None;
+        let ref remote_branch = remote_config["remote_branch"];
+        if !(remote_branch.is_badvalue() || remote_branch.is_null()) {
+            let remote_branch_string = remote_branch.as_str().unwrap();
+            let v: Vec<&str> = remote_branch_string.splitn(2, "/").collect();
+            if v.len() != 2 {
+                panic!("`remote_branch` must be in form of `<REMOTE>/<BRANCH>`");
+            }
+            rb = Some(RemoteBranch{ remote_branch: remote_branch_string.to_string(),
+                                    remote_name: v[0].to_string(),
+                                    remote_branch_name: v[1].to_string() });
+        }
+
         let mut mr = MonitoredRemote{
-            remote_name: String::from(remote_name),
-            branch: None,
-            label: None,
+            remote_branch: rb,
             display_if_uptodate: uptodate,
             pre_format: pre_format,
             post_format: post_format
         };
-
-        let ref branch = remote_config["branch"];
-        if !(branch.is_badvalue() || branch.is_null()) {
-            mr.branch = Some(String::from(branch.as_str().unwrap()));
-        }
-
-        let ref label = remote_config["label"];
-        if !(label.is_badvalue() || label.is_null()) {
-            mr.label = Some(String::from(label.as_str().unwrap()));
-        }
 
         mr
     }
@@ -191,10 +205,10 @@ impl Conf {
         if remotes_yaml.is_badvalue() || remotes_yaml.is_null() {
             return None;
         }
-        let remotes = remotes_yaml.as_hash().unwrap();
+        let remotes = remotes_yaml.as_vec().unwrap();
         let mut response: Vec <MonitoredRemote> = Vec::new();
-        for (k, v) in remotes {
-            response.push(MonitoredRemote::new(v, k.as_str().unwrap()));
+        for y in remotes {
+            response.push(MonitoredRemote::new(y));
         }
         Some(response)
     }
@@ -303,7 +317,7 @@ mod tests {
 
     #[test]
     fn test_default_new_value() {
-        let c = get_configuration(true);
+        let c = get_configuration(None);
         let o = c.get_new_value();
         let v = o.unwrap();
         assert_eq!(v.label, "✚");
@@ -349,35 +363,35 @@ mod tests {
 
     #[test]
     fn test_default_changed_symbol() {
-        let c = get_configuration(true);
+        let c = get_configuration(None);
         let o = c.get_changed_value();
         let v = o.unwrap();
         assert_eq!(v.label, "Δ");
     }
     #[test]
     fn test_default_staged_symbol() {
-        let c = get_configuration(true);
+        let c = get_configuration(None);
         let o = c.get_staged_value();
         let v = o.unwrap();
         assert_eq!(v.label, "▶");
     }
     #[test]
     fn test_default_conflicts_symbol() {
-        let c = get_configuration(true);
+        let c = get_configuration(None);
         let o = c.get_conflicts_value();
         let v = o.unwrap();
         assert_eq!(v.label, "✖");
     }
     #[test]
     fn test_difference_ahead_symbol() {
-        let c = get_configuration(true);
+        let c = get_configuration(None);
         let o = c.get_difference_ahead_value();
         let v = o.unwrap();
         assert_eq!(v.label, "↑");
     }
     #[test]
     fn test_difference_behind_symbol() {
-        let c = get_configuration(true);
+        let c = get_configuration(None);
         let o = c.get_difference_behind_value();
         let v = o.unwrap();
         assert_eq!(v.label, "↓");
@@ -385,34 +399,40 @@ mod tests {
 
     #[test]
     fn test_default_monitored_remotes() {
-        let c = get_configuration(true);
+        let c = get_configuration(None);
         let remotes = c.get_remotes_monitoring().unwrap();
         let ref origin = remotes[0];
         assert_eq!(origin.display_if_uptodate, true);
         let ref upstream = remotes[1];
         assert_eq!(upstream.display_if_uptodate, false);
-        let ref b = upstream.branch;
-        assert_eq!(b.clone().unwrap(), "master");
-        assert_eq!(upstream.label, None);
+        let b_struct_opt = upstream.remote_branch.clone();
+        let b_struct = b_struct_opt.unwrap();
+        assert_eq!(b_struct.remote_branch, "upstream/master");
     }
     #[test]
     fn test_monitored_remotes_ordering() {
         let config_text = "monitor_remotes:
-    x:
-        display_if_uptodate: true
-    y:
-        display_if_uptodate: true
-    z:
-        display_if_uptodate: true
+    - remote_branch: x/x
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+    - remote_branch: y/y
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+    - remote_branch: z/z
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
 ";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
         let c = Conf::new(docs[0].clone());
 
         let remotes = c.get_remotes_monitoring().unwrap();
         let mut iter = remotes.iter();
-        assert_eq!(iter.next().unwrap().remote_name, "x");
-        assert_eq!(iter.next().unwrap().remote_name, "y");
-        assert_eq!(iter.next().unwrap().remote_name, "z");
+        assert_eq!(iter.next().unwrap().clone().remote_branch.unwrap().remote_branch, "x/x");
+        assert_eq!(iter.next().unwrap().clone().remote_branch.unwrap().remote_branch, "y/y");
+        assert_eq!(iter.next().unwrap().clone().remote_branch.unwrap().remote_branch, "z/z");
     }
 
     #[allow(unused_must_use)]
@@ -458,7 +478,7 @@ mod tests {
         let result = create_default_config(p.clone());
         assert!(result.is_ok());
 
-        let c = get_configuration(true);
+        let c = get_configuration(None);
 
         remove_file(p.clone());
     }

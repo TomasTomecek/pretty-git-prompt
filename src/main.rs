@@ -4,6 +4,7 @@ extern crate yaml_rust;
 
 use backend::Backend;
 use cli::cli;
+use conf::{RemoteBranch};
 use conf::{Conf,get_configuration,create_default_config,Value,MonitoredRemote};
 use constants::*;
 
@@ -56,38 +57,51 @@ impl Program {
     }
 
     fn add_monitored_branches_state(&mut self) {
-        let mut local_branch: String = self.backend.get_current_branch_name();
         let mr = match self.conf.get_remotes_monitoring() {
             Some(x) => x,
             None => return (),
         };
         for monitored_remote in mr {
-            let b = match monitored_remote.branch {
+            let rb: Option<RemoteBranch> = monitored_remote.remote_branch;
+            let a_b = match self.backend.get_branch_ahead_behind(rb.clone()) {
                 Some(x) => x,
-                None => local_branch.clone()
+                None => {
+                    log!(self, "no ahead behind stats found for = {:?}", rb);
+                    continue
+                },
             };
-            let (ahead, behind) = match self.backend.get_remote_branch_ahead_behind(&monitored_remote.remote_name, &b) {
-                Some(x) => x,
-                None => (0, 0),
+            let local_branch_name = match a_b.local_branch_name {
+                Some(l) => l,
+                None => {
+                    log!(self, "No local branch name.");
+                    "".to_string()
+                }
             };
-            if monitored_remote.display_if_uptodate || ahead > 0 || behind > 0 {
+            if monitored_remote.display_if_uptodate || a_b.ahead > 0 || a_b.behind > 0 {
                 if let (Some(a_v), Some(b_v)) = (
                     self.conf.get_difference_ahead_value(),
                     self.conf.get_difference_behind_value()
                 ) {
                     let mut special_values: HashMap<String, String> = HashMap::new();
-                    special_values.insert("<BRANCH>".to_string(), b);
-                    special_values.insert("<REMOTE>".to_string(), monitored_remote.remote_name);
+                    special_values.insert("<LOCAL_BRANCH>".to_string(), local_branch_name);
+                    match a_b.remote_branch_name {
+                        Some(v) => special_values.insert("<REMOTE_BRANCH>".to_string(), v),
+                        None => special_values.insert("<REMOTE_BRANCH>".to_string(), "".to_string()),
+                    };
+                    match a_b.remote_name {
+                        Some(v) => special_values.insert("<REMOTE>".to_string(), v),
+                        None => special_values.insert("<REMOTE>".to_string(), "".to_string()),
+                    };
                     let mut local: String = format!(
                         "{}{}",
                         substiute_special_values(monitored_remote.pre_format, &special_values),
                         substiute_special_values(monitored_remote.post_format, &special_values),
                     );
-                    if ahead > 0 {
-                        local += &format_value(a_v, ahead.to_string());
+                    if a_b.ahead > 0 {
+                        local += &format_value(a_v, a_b.ahead.to_string());
                     }
-                    if behind > 0 {
-                        local += &format_value(b_v, behind.to_string());
+                    if a_b.behind > 0 {
+                        local += &format_value(b_v, a_b.behind.to_string());
                     }
                     self.out.push(local);
                 }
@@ -184,7 +198,7 @@ fn main() {
         };
     }
 
-    let backend = Backend{ repo: repo, debug: debug_enabled };
+    let backend = Backend::new(repo, debug_enabled);
     let mut output = Program::new(backend, conf, debug_enabled);
 
     output.populate();
