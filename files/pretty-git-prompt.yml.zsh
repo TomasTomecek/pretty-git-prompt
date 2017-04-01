@@ -36,23 +36,24 @@ values:
 # monitor status against different remotes (optional), type dict
 # track history divergence
 monitor_remotes:
-    origin:
-        # display the remote even if there is no difference with current branch (required), type bool
-        display_if_uptodate: true
-        # this is displayed as: '[pre_format][value][post_format]'
-        # include coloring in pre_format and reset colors in post_format
-        # you can also include arbitrary string and substitute special values:
-        #  * <REMOTE> will be replaced with name of a remote
-        #  * <BRANCH> will be replaced with current branch name
-        pre_format: '%{%F{blue}%}<BRANCH>'
-        post_format: '%{%f%}'
-    # remote name (optional), type dict
-    upstream:
-        # remote branch name (optional), type string
-        # if omitted look for remotely tracked one
-        # git branch --set-upstream-to
-        branch: master
-        display_if_uptodate: false
-        pre_format: '%{%F{green}%}<REMOTE>'
-        post_format: '%{%f%}'
-
+      # formatting (required), both are required
+      # this is displayed as: '[pre_format][value][post_format]'
+      # include coloring in pre_format and reset colors in post_format
+      # you can also include arbitrary string
+      # there are some special values which are substituted:
+      #  * <REMOTE> will be replaced with name of a remote
+      #  * <LOCAL_BRANCH> will be replaced with current branch name
+      #  * <REMOTE_BRANCH> will be replaced with name of remote branch
+    - pre_format: '%{%F{blue}%}<LOCAL_BRANCH>'
+      post_format: '%{%f%}'
+      # remote branch name (optional), type string
+      # example: 'upstream/mater'
+      # if omitted look for remotely tracked branch usualy set up with:
+      #   git branch --set-upstream-to
+      # remote_branch: ''
+      # display the remote even if there is no difference with current branch (required), type bool
+      display_if_uptodate: true
+    - remote_branch: 'upstream/master'
+      display_if_uptodate: false
+      pre_format: '%{%F{green}%}<REMOTE>'
+      post_format: '%{%f%}'
