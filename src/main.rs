@@ -138,7 +138,12 @@ impl Program {
     // print output buffer
     fn output(&self) {
         log!(self, "# of blocks = {}", self.out.len());
-        println!("{}", self.out.join("|"));
+        let output = self.out.join("|");
+        if self.debug {
+            println!("'{}'", output);
+        } else {
+            println!("{}", output);
+        }
     }
 }
 
