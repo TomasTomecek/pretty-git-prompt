@@ -6,7 +6,7 @@
 
 .PHONY=default compile build build-unstable-container build-stable-container stable-build unstable-build exec-stable-build exec-unstable-build test exec-test
 RUST_STABLE_SPEC="1.15.1"
-RUST_UNSTABLE_SPEC="nightly-2017-03-16"
+RUST_UNSTABLE_SPEC="nightly-2017-03-30"
 DEPS=$(wildcard src/*.rs)
 CURRENT_USER="$(shell id -u)"
 STABLE_BUILD_IMAGE="${USER}/pretty-git-prompt"
