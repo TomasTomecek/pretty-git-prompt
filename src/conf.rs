@@ -94,28 +94,28 @@ pub struct MonitoredRemote {
 impl MonitoredRemote {
     fn new(remote_config: &Yaml) -> MonitoredRemote {
         let uptodate: bool;
-        let ref display_if_uptodate = remote_config["display_if_uptodate"];
+        let display_if_uptodate = &remote_config["display_if_uptodate"];
         if display_if_uptodate.is_badvalue() || display_if_uptodate.is_null() {
             panic!("'display_if_uptodate' key is required and has to be bool");
         }
         uptodate = display_if_uptodate.as_bool().unwrap();
 
         let pre_format: String;
-        let ref pre_format_yaml = remote_config["pre_format"];
+        let pre_format_yaml = &remote_config["pre_format"];
         if pre_format_yaml.is_badvalue() || pre_format_yaml.is_null() {
             panic!("'pre_format' key is required and has to be string");
         }
         pre_format = String::from(pre_format_yaml.as_str().unwrap());
 
         let post_format: String;
-        let ref post_format_yaml = remote_config["post_format"];
+        let post_format_yaml = &remote_config["post_format"];
         if post_format_yaml.is_badvalue() || post_format_yaml.is_null() {
             panic!("'post_format' key is required and has to be string");
         }
         post_format = String::from(post_format_yaml.as_str().unwrap());
 
         let mut rb: Option<RemoteBranch> = None;
-        let ref remote_branch = remote_config["remote_branch"];
+        let remote_branch = &remote_config["remote_branch"];
         if !(remote_branch.is_badvalue() || remote_branch.is_null()) {
             let remote_branch_string = remote_branch.as_str().unwrap();
             let v: Vec<&str> = remote_branch_string.splitn(2, "/").collect();
