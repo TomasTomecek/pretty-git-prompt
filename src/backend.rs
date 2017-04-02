@@ -1,6 +1,5 @@
-// TODO: cache values: Create new struct and use it within Backend
-
 use std::collections::HashMap;
+use std::cell::RefCell;
 
 use conf::{RemoteBranch};
 use constants::{CHANGED_KEY,NEW_KEY,STAGED_KEY,CONFLICTS_KEY};
@@ -8,10 +7,17 @@ use constants::{CHANGED_KEY,NEW_KEY,STAGED_KEY,CONFLICTS_KEY};
 use git2::*;
 
 
+struct Cache {
+    current_branch_name: RefCell<Option<String>>,
+    // TODO: Reference can't be cached (can't be cloned)
+    //       implement via OID
+    // head: RefCell<Option<Oid>>,
+}
+
 pub struct Backend {
+    cache: Cache,
     pub repo: Repository,
     pub debug: bool,
-    pub current_branch_name: Option<String>  // cache
 }
 
 pub struct BranchAheadBehind {
@@ -38,9 +44,29 @@ struct RefPair {
 }
 
 
+impl Cache {
+    pub fn new() -> Cache {
+        Cache{ current_branch_name: RefCell::new(None) }
+    }
+
+    fn set_current_branch_name(&self, n: Option<String>) {
+        let mut c = self.current_branch_name.borrow_mut();
+        *c = n;
+    }
+
+    fn is_current_branch_set(&self) -> bool {
+        self.current_branch_name.borrow().is_some()
+    }
+
+    fn get_current_branch(&self) -> Option<String> {
+        self.current_branch_name.borrow().clone()
+    }
+}
+
+
 impl Backend {
     pub fn new(repo: Repository, debug: bool) -> Backend {
-        Backend{ repo: repo, debug: debug, current_branch_name: None }
+        Backend{ repo: repo, debug: debug, cache: Cache::new() }
     }
 
     fn get_head(&self) -> Option<Reference> {
@@ -130,13 +156,9 @@ impl Backend {
         }
     }
 
-    fn set_current_branch_name(&mut self, n: Option<String>) {
-        self.current_branch_name = n;
-    }
-
     pub fn get_current_branch_name(&mut self) -> Option<String> {
-        if self.current_branch_name.is_some() {
-            return self.current_branch_name.clone();
+        if self.cache.is_current_branch_set() {
+            return self.cache.get_current_branch();
         }
         let mut head: Option<Reference> = None;
         if head.is_none() {
@@ -147,6 +169,7 @@ impl Backend {
             None => return None,
         };
         let current_branch_name = self.get_branch_name_for_reference(h);
+        self.cache.set_current_branch_name(current_branch_name.clone());
         current_branch_name
     }
 
