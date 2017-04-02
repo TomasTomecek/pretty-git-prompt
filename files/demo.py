@@ -236,6 +236,11 @@ class Demo(RWORemoteCommits):
 def demo():
     d = tempfile.mkdtemp()
     l = py.path.local(d)
+
+    defult_config_path = os.path.expanduser("~/.config/pretty-git-prompt.yml")
+    os.makedirs(os.path.dirname(defult_config_path), exist_ok=True)
+    shutil.copy2("/app/files/pretty-git-prompt.yml.zsh", defult_config_path)
+
     try:
         with Demo(l) as g:
             pass
