@@ -127,16 +127,14 @@ impl Backend {
                 let s = ref_name_string.to_string();
                 log!(self, "Shorthand for reference is: {}", s);
                 return Some(s);
-            } else {
-                if let Some(ref_name) = r.symbolic_target() {
-                    let ref_name_string = ref_name.to_string();
-                    log!(self, "shorthand = HEAD, links to: {}", ref_name_string);
-                    let mut path: Vec<&str> = ref_name_string.split('/').collect();
-                    if let Some(branch_short) = path.pop() {
-                        let s = branch_short.to_string();
-                        log!(self, "Last part of full name is: {}", s);
-                        return Some(s);
-                    }
+            } else if let Some(ref_name) = r.symbolic_target() {
+                let ref_name_string = ref_name.to_string();
+                log!(self, "shorthand = HEAD, links to: {}", ref_name_string);
+                let mut path: Vec<&str> = ref_name_string.split('/').collect();
+                if let Some(branch_short) = path.pop() {
+                    let s = branch_short.to_string();
+                    log!(self, "Last part of full name is: {}", s);
+                    return Some(s);
                 }
             }
         }
