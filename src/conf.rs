@@ -224,7 +224,7 @@ pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, i
 }
 
 pub fn get_configuration(supplied_conf_path: Option<String>) -> Conf {
-    let mut content: String;
+    let content: String;
     if supplied_conf_path.is_some() {
         content = match load_configuration_from_file(supplied_conf_path.unwrap()) {
             Ok(c) => c,
