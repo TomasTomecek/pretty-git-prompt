@@ -1,5 +1,7 @@
 # pretty-git-prompt
 
+[![Build Status](https://travis-ci.org/TomasTomecek/pretty-git-prompt.svg?branch=master)](https://travis-ci.org/TomasTomecek/pretty-git-prompt)
+
 Beautiful prompt with info about your current git repository.
 
 ![Preview of pretty-git-prompt](/data/example.png)
