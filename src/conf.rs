@@ -218,7 +218,7 @@ pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, i
     };
     let mut contents = String::new();
     match file.read_to_string(&mut contents) {
-        Ok(size) => Ok(contents),
+        Ok(_) => Ok(contents),
         Err(e) => Err(e)
     }
 }
