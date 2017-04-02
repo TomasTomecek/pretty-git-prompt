@@ -22,7 +22,7 @@ mod constants;
 
 
 fn format_value(value: Value, data: &str) -> String {
-    format!("{}{}{}{}", value.pre_format, value.label, data, value.post_format)
+    format!("{}{}{}", value.pre_format, data, value.post_format)
 }
 
 fn substiute_special_values(s: String, values: &HashMap<String, String>) -> String {
@@ -116,22 +116,22 @@ impl Program {
 
                 if let Some(x) = s.get(NEW_KEY) {
                     if let Some(y) = self.conf.get_new_value() {
-                        o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format);
+                        o += &format!("{}{}{}", y.pre_format, x, y.post_format);
                     };
                 }
                 if let Some(x) = s.get(CHANGED_KEY) {
                     if let Some(y) = self.conf.get_changed_value() {
-                        o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format);
+                        o += &format!("{}{}{}", y.pre_format, x, y.post_format);
                     };
                 }
                 if let Some(x) = s.get(STAGED_KEY) {
                     if let Some(y) = self.conf.get_staged_value() {
-                        o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format);
+                        o += &format!("{}{}{}", y.pre_format, x, y.post_format);
                     };
                 }
                 if let Some(x) = s.get(CONFLICTS_KEY) {
                     if let Some(y) = self.conf.get_conflicts_value() {
-                        o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format);
+                        o += &format!("{}{}{}", y.pre_format, x, y.post_format);
                     };
                 }
                 self.out.push(o);

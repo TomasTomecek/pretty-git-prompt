@@ -7,42 +7,36 @@ use constants::{get_default_config_path};
 
 use yaml_rust::{YamlLoader, Yaml};
 
-// TODO: remove label key, merge with pre, post
 // TODO: add version
+// TODO: polish and sync comments
 static DEFAULT_CONF: &'static str = "---
 # configuration of various values (required), type dict
 # if you omit a value, it won't be displayed
 values:
-    # count of untracked files
+    # the number of untracked files
     new:
-        # prefix label (required), type string
-        label: '✚'
-        # formatting specification of the label and value
+        # formatting (required), both are required
         # https://wiki.archlinux.org/index.php/zsh#Colors
         # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Visual-effects
-        # TODO: bash
-        # TODO: fish?
-        pre_format: ''
+        # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
+        # This is values get formatted:
+        #   [pre_format][value][post_format]
+        pre_format: '✚'
         post_format: ''
     changed:
-        label: 'Δ'
-        pre_format: ''
+        pre_format: 'Δ'
         post_format: ''
     staged:
-        label: '▶'
-        pre_format: ''
+        pre_format: '▶'
         post_format: ''
     conflicts:
-        label: '✖'
-        pre_format: ''
+        pre_format: '✖'
         post_format: ''
     difference_ahead:
-        label: '↑'
-        pre_format: ''
+        pre_format: '↑'
         post_format: ''
     difference_behind:
-        label: '↓'
-        pre_format: ''
+        pre_format: '↓'
         post_format: ''
 
 # monitor status against different remotes (optional), type dict
@@ -136,7 +130,6 @@ impl MonitoredRemote {
 }
 
 pub struct Value {
-    pub label: String,
     pub pre_format: String,
     pub post_format: String,
 }
@@ -152,11 +145,7 @@ impl Value {
             // TODO: debug log here
             return None;
         }
-        let label = match value_yaml["label"].as_str() {
-            Some(x) => x,
-            None => panic!("'label' has to be present and needs to be string"),
-        };
-        let mut v = Value{ label: String::from(label), pre_format: String::from(""), post_format: String::from("") };
+        let mut v = Value{ pre_format: String::from(""), post_format: String::from("") };
         let ref pre_format_yaml = value_yaml["pre_format"];
         if !(pre_format_yaml.is_badvalue() || pre_format_yaml.is_null()) {
             v.pre_format = String::from(pre_format_yaml.as_str().unwrap());
@@ -296,7 +285,7 @@ mod tests {
         let c = get_configuration(None);
         let o = c.get_new_value();
         let v = o.unwrap();
-        assert_eq!(v.label, "✚");
+        assert_eq!(v.pre_format, "✚");
     }
     #[test]
     fn test_nonexistent_new_value() {
@@ -322,8 +311,7 @@ mod tests {
     fn test_some_new_value() {
         let config_text = "values:
     new:
-        label: '+'
-        pre_format: '%{%F{014}%}'
+        pre_format: '%{%F{014}%}+'
         post_format: '%{%f%}'
 ";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
@@ -332,8 +320,7 @@ mod tests {
         let o = c.get_new_value();
         assert!(o.is_some());
         let v = o.unwrap();
-        assert_eq!(v.label, "+");
-        assert_eq!(v.pre_format, "%{%F{014}%}");
+        assert_eq!(v.pre_format, "%{%F{014}%}+");
         assert_eq!(v.post_format, "%{%f%}");
     }
 
@@ -342,35 +329,35 @@ mod tests {
         let c = get_configuration(None);
         let o = c.get_changed_value();
         let v = o.unwrap();
-        assert_eq!(v.label, "Δ");
+        assert_eq!(v.pre_format, "Δ");
     }
     #[test]
     fn test_default_staged_symbol() {
         let c = get_configuration(None);
         let o = c.get_staged_value();
         let v = o.unwrap();
-        assert_eq!(v.label, "▶");
+        assert_eq!(v.pre_format, "▶");
     }
     #[test]
     fn test_default_conflicts_symbol() {
         let c = get_configuration(None);
         let o = c.get_conflicts_value();
         let v = o.unwrap();
-        assert_eq!(v.label, "✖");
+        assert_eq!(v.pre_format, "✖");
     }
     #[test]
     fn test_difference_ahead_symbol() {
         let c = get_configuration(None);
         let o = c.get_difference_ahead_value();
         let v = o.unwrap();
-        assert_eq!(v.label, "↑");
+        assert_eq!(v.pre_format, "↑");
     }
     #[test]
     fn test_difference_behind_symbol() {
         let c = get_configuration(None);
         let o = c.get_difference_behind_value();
         let v = o.unwrap();
-        assert_eq!(v.label, "↓");
+        assert_eq!(v.pre_format, "↓");
     }
 
     #[test]

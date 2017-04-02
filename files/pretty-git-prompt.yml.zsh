@@ -3,33 +3,25 @@
 values:
     # count of untracked files
     new:
-        # prefix label (required), type string
-        label: '✚'
-        # formatting specification of the label and value
         # https://wiki.archlinux.org/index.php/zsh#Colors
         # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Visual-effects
         # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
-        pre_format: '%{%F{014}%}'
+        pre_format: '%{%F{014}%}✚'
         post_format: '%{%f%}'
     changed:
-        label: 'Δ'
-        pre_format: '%{%B%F{red}%}'
+        pre_format: '%{%B%F{red}%}Δ'
         post_format: '%{%b%f%}'
     staged:
-        label: '▶'
-        pre_format: '%{%F{green}%}'
+        pre_format: '%{%F{green}%}▶'
         post_format: '%{%f%}'
     conflicts:
-        label: '✖'
-        pre_format: '%{%F{yellow}%}'
+        pre_format: '%{%F{yellow}%}✖'
         post_format: '%{%f%}'
     difference_ahead:
-        label: '↑'
-        pre_format: '%{%F{white}%}'
+        pre_format: '%{%F{white}%}↑'
         post_format: '%{%f%}'
     difference_behind:
-        label: '↓'
-        pre_format: '%{%F{white}%}'
+        pre_format: '%{%F{white}%}↓'
         post_format: '%{%f%}'
 
 # monitor status against different remotes (optional), type dict

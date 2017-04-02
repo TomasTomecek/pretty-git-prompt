@@ -3,33 +3,25 @@
 values:
     # count of untracked files
     new:
-        # prefix label (required), type string
-        label: '✚'
-        # formatting specification of the label and value
         # https://wiki.archlinux.org/index.php/zsh#Colors
         # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Visual-effects
         # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
-        pre_format: '\[\e[38;5;248m\]'
+        pre_format: '\[\e[38;5;248m\]✚'
         post_format: '\[\e[0m\]'
     changed:
-        label: 'Δ'
-        pre_format: '\[\e[38;5;166m\]'
+        pre_format: '\[\e[38;5;166m\]Δ'
         post_format: '\[\e[0m\]'
     staged:
-        label: '▶'
-        pre_format: '\[\e[38;5;2m\]'
+        pre_format: '\[\e[38;5;2m\]▶'
         post_format: '\[\e[0m\]'
     conflicts:
-        label: '✖'
-        pre_format: '\[\e[38;5;226m\]'
+        pre_format: '\[\e[38;5;226m\]✖'
         post_format: '\[\e[0m\]'
     difference_ahead:
-        label: '↑'
-        pre_format: '\[\e[38;5;7m\]'
+        pre_format: '\[\e[38;5;7m\]↑'
         post_format: '\[\e[0m\]'
     difference_behind:
-        label: '↓'
-        pre_format: '\[\e[38;5;7m\]'
+        pre_format: '\[\e[38;5;7m\]↓'
         post_format: '\[\e[0m\]'
 
 # monitor status against different remotes (optional), type dict
