@@ -173,10 +173,11 @@ fn main() {
         }
     };
 
-    let mut conf_path: Option<String> = None;
-    if matches.is_present("config") {
-        conf_path = Some(String::from(matches.value_of("config").unwrap()));
-    }
+    let conf_path: Option<String> = if matches.is_present("config") {
+        Some(String::from(matches.value_of("config").unwrap()))
+    } else {
+        None
+    };
 
     let conf = get_configuration(conf_path);
 
