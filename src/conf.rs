@@ -278,9 +278,7 @@ mod tests {
     use std::fs::{File,OpenOptions,remove_file};
     use std::io::{Write,Read};
     use std::path::{Path,PathBuf};
-
     use conf::{get_configuration,create_default_config,DEFAULT_CONF,Conf};
-
     use yaml_rust::{YamlLoader, Yaml};
 
     #[test]
