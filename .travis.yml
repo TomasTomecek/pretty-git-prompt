@@ -1,0 +1,13 @@
+language: rust
+
+env:
+  global:
+    - PROJECT_NAME=pretty-git-prompt
+
+rust:
+  - stable
+  - nightly
+
+# matrix:
+#   allow_failures:
+#     - rust: nightly
