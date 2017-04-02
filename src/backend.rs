@@ -81,7 +81,7 @@ impl Backend {
                     },
                     Err(e) => {
                         log!(self, "reference HEAD: {}", e);
-                        return None
+                        None
                     },
                 }
             },
@@ -94,7 +94,7 @@ impl Backend {
             Some(v) => v.target(),
             None => {
                 log!(self, "Failed to find Oid for HEAD.");
-                return None
+                None
             },
         }
     }
