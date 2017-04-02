@@ -5,7 +5,7 @@ extern crate yaml_rust;
 use backend::Backend;
 use cli::cli;
 use conf::{RemoteBranch};
-use conf::{Conf,get_configuration,create_default_config,Value,MonitoredRemote};
+use conf::{Conf,get_configuration,create_default_config,Value};
 use constants::*;
 
 use std::collections::HashMap;
