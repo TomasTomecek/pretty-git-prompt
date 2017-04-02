@@ -178,7 +178,7 @@ impl Backend {
         let upstream = match b.upstream() {
             Ok(u) => u,
             Err(e) => {
-                log!(self, "Can't get upstream branch for {:?}", b.name());
+                log!(self, "Can't get upstream branch for {:?}: {:?}", b.name(), e);
                 return None;
             }
         };
@@ -191,7 +191,7 @@ impl Backend {
                 },
             },
             Err(e) => {
-                log!(self, "Error while getting name for upstream branch");
+                log!(self, "Error while getting name for upstream branch: {:?}", e);
                 return None;
             }
         };
@@ -254,7 +254,7 @@ impl Backend {
                 ab.behind = b;
             },
             Err(e) => {
-                log!(self, "Can't get ahead & behind stats for branch {}", ref_pair.branch_name);
+                log!(self, "Can't get ahead & behind stats for branch {}: {:?}", ref_pair.branch_name, e);
             }
         };
         Some(ab)
@@ -271,7 +271,7 @@ impl Backend {
                                            oid: o.into_reference().target().unwrap() }),
                     Err(e) => {
                         // don't panic here - it doesn't exist, we don't care
-                        log!(self, "No remote branch found for {}", b.remote_branch_name);
+                        log!(self, "No remote branch found for {}: {:?}", b.remote_branch_name, e);
                         None
                     }
                 }
