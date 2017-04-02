@@ -203,7 +203,7 @@ impl Backend {
         };
         let remote_name = match upstream_reference.name() {
             Some(n) => {
-                let v: Vec<&str> = n.splitn(3, "/").collect();
+                let v: Vec<&str> = n.splitn(3, '/').collect();
                 if v.len() >= 3 {
                     v[1]
                 } else {
