@@ -38,6 +38,7 @@ USER ${USER_ID}
 RUN mkdir -p $HOME/.local/bin/ && \
     ln -s /app/target/debug/pretty-git-prompt $HOME/.local/bin/
 COPY files/.zshrc /home/pretty/.zshrc
+COPY files/.bashrc /home/pretty/.bashrc
 
 ENV LANG=en_US.utf8 \
     LC_ALL=en_US.UTF-8 \

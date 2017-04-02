@@ -51,9 +51,10 @@ exec-test: target/debug/pretty-git-prompt
 
 # compile and inject into container
 # open prompt with prepared git repo
-# TODO: override config via env var
 zsh-demo:
-	$(UNSTABLE_CONTAINER_RUN) files/demo.py
+	$(UNSTABLE_CONTAINER_RUN) files/demo.py zsh
+bash-demo:
+	$(UNSTABLE_CONTAINER_RUN) files/demo.py bash
 
 
 shell:

@@ -9,28 +9,28 @@ values:
         # https://wiki.archlinux.org/index.php/zsh#Colors
         # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Visual-effects
         # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
-        pre_format: '%{%F{014}%}'
-        post_format: '%{%f%}'
+        pre_format: '\[\e[38;5;248m\]'
+        post_format: '\[\e[0m\]'
     changed:
         label: 'Δ'
-        pre_format: '%{%B%F{red}%}'
-        post_format: '%{%b%f%}'
+        pre_format: '\[\e[38;5;166m\]'
+        post_format: '\[\e[0m\]'
     staged:
         label: '▶'
-        pre_format: '%{%F{green}%}'
-        post_format: '%{%f%}'
+        pre_format: '\[\e[38;5;2m\]'
+        post_format: '\[\e[0m\]'
     conflicts:
         label: '✖'
-        pre_format: '%{%F{yellow}%}'
-        post_format: '%{%f%}'
+        pre_format: '\[\e[38;5;226m\]'
+        post_format: '\[\e[0m\]'
     difference_ahead:
         label: '↑'
-        pre_format: '%{%F{white}%}'
-        post_format: '%{%f%}'
+        pre_format: '\[\e[38;5;7m\]'
+        post_format: '\[\e[0m\]'
     difference_behind:
         label: '↓'
-        pre_format: '%{%F{white}%}'
-        post_format: '%{%f%}'
+        pre_format: '\[\e[38;5;7m\]'
+        post_format: '\[\e[0m\]'
 
 # monitor status against different remotes (optional), type dict
 # track history divergence
@@ -43,8 +43,8 @@ monitor_remotes:
       #  * <REMOTE> will be replaced with name of a remote
       #  * <LOCAL_BRANCH> will be replaced with current branch name
       #  * <REMOTE_BRANCH> will be replaced with name of remote branch
-    - pre_format: '%{%F{blue}%}<LOCAL_BRANCH>'
-      post_format: '%{%f%}'
+    - pre_format: '\[\e[38;5;4m\]<LOCAL_BRANCH>'
+      post_format: '\[\e[0m\]'
       # remote branch name (optional), type string
       # example: 'upstream/mater'
       # if omitted look for remotely tracked branch usualy set up with:
@@ -54,5 +54,5 @@ monitor_remotes:
       display_if_uptodate: true
     - remote_branch: 'upstream/master'
       display_if_uptodate: false
-      pre_format: '%{%F{green}%}<REMOTE>'
-      post_format: '%{%f%}'
+      pre_format: '\[\e[38;5;2m\]<REMOTE>'
+      post_format: '\[\e[0m\]'

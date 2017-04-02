@@ -67,7 +67,7 @@ def append_file(filename, content):
 class G():
     """ wrapper on top of pexpect.spawn to create arbitrary git repositories """
 
-    def __init__(self, tmpdir):
+    def __init__(self, tmpdir, shell_name):
         self.tmpdir = tmpdir
         self.repo = tmpdir.mkdir("repo")
         self.origin = tmpdir.mkdir("origin")
@@ -77,7 +77,7 @@ class G():
         subprocess.check_output(["git", "config", "--global", "user.email", "pretty-git-prompt@example.com"])
         subprocess.check_output(["git", "config", "--global", "user.name", "Git \"Pretty\" Prompter"])
         self.cwd = self.repo.chdir()
-        self.z = pexpect.spawn("zsh -i", encoding=sys.getdefaultencoding())
+        self.z = pexpect.spawn("{} -i".format(shell_name), encoding=sys.getdefaultencoding())
         self.s = Slacker()
 
     def __enter__(self):
@@ -237,12 +237,18 @@ def demo():
     d = tempfile.mkdtemp()
     l = py.path.local(d)
 
+    try:
+        shell_name = sys.argv[1]
+    except IndexError:
+        print("Usage:  ./demo.py <SHELL_NAME>")
+        sys.exit(1)
+
     defult_config_path = os.path.expanduser("~/.config/pretty-git-prompt.yml")
     os.makedirs(os.path.dirname(defult_config_path), exist_ok=True)
-    shutil.copy2("/app/files/pretty-git-prompt.yml.zsh", defult_config_path)
+    shutil.copy2("/app/files/pretty-git-prompt.yml.{}".format(shell_name), defult_config_path)
 
     try:
-        with Demo(l) as g:
+        with Demo(l, shell_name) as g:
             pass
     finally:
         shutil.rmtree(d)
