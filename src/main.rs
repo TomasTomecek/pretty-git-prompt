@@ -115,27 +115,23 @@ impl Program {
                 let mut o = String::from("");
 
                 if let Some(x) = s.get(NEW_KEY) {
-                    match self.conf.get_new_value() {
-                        Some(y) => o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format),
-                        None => (),
+                    if let Some(y) = self.conf.get_new_value() {
+                        o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format);
                     };
                 }
                 if let Some(x) = s.get(CHANGED_KEY) {
-                    match self.conf.get_changed_value() {
-                        Some(y) => o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format),
-                        None => (),
+                    if let Some(y) = self.conf.get_changed_value() {
+                        o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format);
                     };
                 }
                 if let Some(x) = s.get(STAGED_KEY) {
-                    match self.conf.get_staged_value() {
-                        Some(y) => o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format),
-                        None => (),
+                    if let Some(y) = self.conf.get_staged_value() {
+                        o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format);
                     };
                 }
                 if let Some(x) = s.get(CONFLICTS_KEY) {
-                    match self.conf.get_conflicts_value() {
-                        Some(y) => o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format),
-                        None => (),
+                    if let Some(y) = self.conf.get_conflicts_value() {
+                        o += &format!("{}{}{}{}", y.pre_format, y.label, x, y.post_format);
                     };
                 }
                 self.out.push(o);
