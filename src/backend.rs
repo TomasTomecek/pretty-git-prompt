@@ -100,7 +100,6 @@ impl Backend {
     }
 
     fn resolve_symbolic_reference<'a>(&self, reference: Option<Reference<'a>>) -> Option<Reference<'a>> {
-        return reference;
         let s_reference = match reference {
             Some(v) => {
                 match v.resolve() {
