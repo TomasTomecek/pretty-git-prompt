@@ -142,6 +142,7 @@ impl Backend {
             }
         }
 
+        // we're getting the commit hash as name
         match r.target() {
             Some(v) => {
                 let hash_str = v.to_string();
