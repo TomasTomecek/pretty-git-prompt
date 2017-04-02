@@ -60,4 +60,4 @@ shell:
 	$(UNSTABLE_CONTAINER_RUN) zsh -l
 
 show-work:
-	egrep -C 3 "(TODO|FIXME)" $(DEPS) Makefile Dockerfile
+	egrep --color=yes -C 3 "(TODO|FIXME)" $(DEPS) Makefile Dockerfile
