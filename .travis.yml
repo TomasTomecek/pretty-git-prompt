@@ -1,6 +1,8 @@
 dist: trusty
-sudo: false
+sudo: required
 language: rust
+services:
+  - docker
 
 env:
   global:
@@ -10,6 +12,8 @@ rust:
   - stable
   - nightly
 
+script:
+  - if [ ${TRAVIS_EVENT_TYPE} = "cron" ] ; then make test ; else cargo build --verbose && cargo test --verbose ; fi
 # matrix:
 #   allow_failures:
 #     - rust: nightly
