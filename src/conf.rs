@@ -127,14 +127,12 @@ impl MonitoredRemote {
                                     remote_branch_name: v[1].to_string() });
         }
 
-        let mut mr = MonitoredRemote{
+        MonitoredRemote{
             remote_branch: rb,
             display_if_uptodate: uptodate,
             pre_format: pre_format,
             post_format: post_format
-        };
-
-        mr
+        }
     }
 }
 
