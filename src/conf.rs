@@ -212,25 +212,6 @@ impl Conf {
         }
         Some(response)
     }
-
-    pub fn get_branch_color(&self) -> String {
-        String::from(self.c["colors"]["branch"].as_str().unwrap())
-    }
-    pub fn get_remote_difference_color(&self) -> String {
-        String::from(self.c["colors"]["remote_difference"].as_str().unwrap())
-    }
-    pub fn get_new_color(&self) -> String {
-        String::from(self.c["colors"]["new"].as_str().unwrap())
-    }
-    pub fn get_changed_color(&self) -> String {
-        String::from(self.c["colors"]["changed"].as_str().unwrap())
-    }
-    pub fn get_staged_color(&self) -> String {
-        String::from(self.c["colors"]["staged"].as_str().unwrap())
-    }
-    pub fn get_conflicts_color(&self) -> String {
-        String::from(self.c["colors"]["conflicts"].as_str().unwrap())
-    }
 }
 
 pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
