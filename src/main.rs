@@ -21,12 +21,12 @@ mod conf;
 mod constants;
 
 
-fn format_value(value: Value, data: String) -> String {
+fn format_value(value: Value, data: &str) -> String {
     format!("{}{}{}{}", value.pre_format, value.label, data, value.post_format)
 }
 
 fn substiute_special_values(s: String, values: &HashMap<String, String>) -> String {
-    let mut r:String = s.clone();
+    let mut r:String = s;
     for (k, v) in values {
         r = r.replace(k, &v);
     }
@@ -98,10 +98,10 @@ impl Program {
                         substiute_special_values(monitored_remote.post_format, &special_values),
                     );
                     if a_b.ahead > 0 {
-                        local += &format_value(a_v, a_b.ahead.to_string());
+                        local += &format_value(a_v, &a_b.ahead.to_string());
                     }
                     if a_b.behind > 0 {
-                        local += &format_value(b_v, a_b.behind.to_string());
+                        local += &format_value(b_v, &a_b.behind.to_string());
                     }
                     self.out.push(local);
                 }
