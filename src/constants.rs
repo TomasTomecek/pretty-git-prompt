@@ -1,4 +1,5 @@
 use std::env;
+use std::ffi::OsStr;
 use std::fs::create_dir_all;
 use std::path::{PathBuf};
 
@@ -35,6 +36,6 @@ pub fn get_default_config_path() -> PathBuf {
 #[test]
 fn test_default_config_path() {
     let p = get_default_config_path();
-    // TODO: test if the dir exists
-    // TODO: test if the str ends with DEFAULT_CONFIG_NAME
+    assert!(p.parent().unwrap().exists());
+    assert_eq!(p.file_name().unwrap(), OsStr::new(DEFAULT_CONFIG_NAME));
 }
