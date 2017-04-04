@@ -7,7 +7,7 @@ use constants::{get_default_config_path};
 
 use yaml_rust::{YamlLoader, Yaml};
 
-// TODO: add version
+// TODO: add version and check for correct version
 // TODO: polish and sync comments
 static DEFAULT_CONF: &'static str = "---
 # configuration of various values (required), type dict
