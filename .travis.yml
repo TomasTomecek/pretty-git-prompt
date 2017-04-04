@@ -13,7 +13,7 @@ rust:
   - nightly
 
 script:
-  - if [ ${TRAVIS_EVENT_TYPE} = "cron" ] ; then make test ; else cargo build --verbose && cargo test --verbose ; fi
+  - if [ ${TRAVIS_EVENT_TYPE} = "cron" ] ; then make build-unstable-container && make test ; fi
 # matrix:
 #   allow_failures:
 #     - rust: nightly
