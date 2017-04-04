@@ -27,7 +27,7 @@ Make sure that binary `pretty-git-prompt` is placed on your `$PATH`.
 
 ## Solving problems
 
-If you encounter an issue, feel free to run the tool with verbose to output which should help you resolve your issue:
+If you encounter a problem, you may run the tool with verbose output to help you resolve the issue:
 
 ```
 $ pretty-git-prompt --debug
