@@ -47,7 +47,7 @@ test:
 
 exec-test: target/debug/pretty-git-prompt
 	py.test-3 -vv tests
-	cargo test
+	cargo test --verbose
 	$(shell cargo clippy || :)
 
 # compile and inject into container
