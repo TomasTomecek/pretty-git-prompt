@@ -29,11 +29,14 @@ RUN cd $HOME && curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --spec
 #     rm -rf /rust
 
 RUN if [ $WITH_TEST == "yes" ] ; then \
-    cargo install clippy || : && \
     dnf install -y git python3-pytest python3-pexpect ; \
     fi
 
 USER ${USER_ID}
+
+RUN if [ $WITH_TEST == "yes" ] ; then \
+    cargo install clippy || : ; \
+    fi
 
 RUN mkdir -p $HOME/.local/bin/ && \
     ln -s /app/target/debug/pretty-git-prompt $HOME/.local/bin/
