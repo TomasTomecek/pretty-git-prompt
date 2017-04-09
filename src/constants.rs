@@ -37,6 +37,7 @@ pub fn get_default_config_path() -> PathBuf {
 
 #[test]
 fn test_default_config_path() {
+    // FIXME: create test dir and remove it aftet testing
     let p = get_default_config_path();
     assert!(p.parent().unwrap().exists());
     assert_eq!(p.file_name().unwrap(), OsStr::new(DEFAULT_CONFIG_NAME));
