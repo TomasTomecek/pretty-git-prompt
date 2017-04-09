@@ -4,7 +4,7 @@
 # stable container is meant to be used
 # unstable is meant for development & testing
 
-.PHONY=default compile build build-unstable-container build-stable-container stable-build unstable-build exec-stable-build exec-unstable-build test exec-test
+.PHONY=default compile build stable-environment unstable-environment stable-build unstable-build exec-stable-build exec-unstable-build test exec-test
 RUST_STABLE_SPEC="1.15.1"
 RUST_UNSTABLE_SPEC="nightly-2017-03-30"
 DEPS=$(wildcard src/*.rs)
@@ -22,12 +22,12 @@ compile: unstable-build
 
 build: stable-build
 
-build-stable-container:
+stable-environment:
 	docker build --build-arg USER_ID=$(CURRENT_USER) --build-arg RUST_SPEC=$(RUST_STABLE_SPEC) --build-arg WITH_TEST=no --tag $(STABLE_BUILD_IMAGE) .
-build-unstable-container:
+unstable-environment:
 	docker build --build-arg USER_ID=$(CURRENT_USER) --build-arg RUST_SPEC=$(RUST_UNSTABLE_SPEC) --build-arg WITH_TEST=yes --tag $(UNSTABLE_BUILD_IMAGE) .
 
-stable-build: build-stable-container
+stable-build: unstable-environment
 	$(STABLE_CONTAINER_RUN) make exec-stable-build
 unstable-build:
 	$(UNSTABLE_CONTAINER_RUN) make exec-unstable-build
