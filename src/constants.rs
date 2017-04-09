@@ -9,6 +9,8 @@ pub static NEW_KEY: &'static str = "new";
 pub static STAGED_KEY: &'static str = "staged";
 pub static CONFLICTS_KEY: &'static str = "conflicts";
 
+pub static CURRENT_CONFIG_VERSION: &'static str = "1";
+
 pub static DEFAULT_CONFIG_NAME: &'static str = "pretty-git-prompt.yml";
 
 pub static CLI_DEFAULT_CONFIG_SUBC_NAME: &'static str = "create-default-config";

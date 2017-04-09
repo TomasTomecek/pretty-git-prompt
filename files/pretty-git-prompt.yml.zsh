@@ -1,3 +1,4 @@
+version: '1'
 # configuration of various values (required), type dict
 # if you omit a value, it won't be displayed
 values:
