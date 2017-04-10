@@ -27,7 +27,7 @@ stable-environment:
 unstable-environment:
 	docker build --build-arg USER_ID=$(CURRENT_USER) --build-arg RUST_SPEC=$(RUST_UNSTABLE_SPEC) --build-arg WITH_TEST=yes --tag $(UNSTABLE_BUILD_IMAGE) .
 
-stable-build: unstable-environment
+stable-build: stable-environment
 	$(STABLE_CONTAINER_RUN) make exec-stable-build
 unstable-build:
 	$(UNSTABLE_CONTAINER_RUN) make exec-unstable-build
