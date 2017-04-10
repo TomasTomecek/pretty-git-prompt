@@ -13,7 +13,7 @@ rust:
   - nightly
 
 script:
-  - if [ ${TRAVIS_EVENT_TYPE} = "cron" ] ; then make build-unstable-container && make test ; fi
+  - if [ ${TRAVIS_EVENT_TYPE} = "cron" ] ; then make unstable-environment && make test ; fi
 # matrix:
 #   allow_failures:
 #     - rust: nightly
