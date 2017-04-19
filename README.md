@@ -156,8 +156,8 @@ $ pretty-git-prompt create-default-config
 
 This repository contains also configuration for bash and zsh with colors:
 
-1. `files/pretty-git-prompt.yml.bash`
-2. `files/pretty-git-prompt.yml.zsh`
+1. [`files/pretty-git-prompt.yml.bash`](https://github.com/TomasTomecek/pretty-git-prompt/blob/master/files/pretty-git-prompt.yml.bash)
+2. [`files/pretty-git-prompt.yml.zsh`](https://github.com/TomasTomecek/pretty-git-prompt/blob/master/files/pretty-git-prompt.yml.zsh)
 
 In case anything is not clear from the comments inside the config files, please
 open a new issue.
