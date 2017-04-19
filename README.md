@@ -123,7 +123,7 @@ Just put it inside your `~/.zshrc` and try it out.
 
 ### bash
 
-You should paste this inside your `~.bashrc`:
+You should paste this inside your `~/.bashrc`:
 
 ```
 pretty_prompt() { PS1="$(pretty-git-prompt)\n\$ "; }
@@ -156,8 +156,8 @@ $ pretty-git-prompt create-default-config
 
 This repository contains also configuration for bash and zsh with colors:
 
-1. files/pretty-git-prompt.yml.bash
-2. files/pretty-git-prompt.yml.zsh
+1. `files/pretty-git-prompt.yml.bash`
+2. `files/pretty-git-prompt.yml.zsh`
 
 In case anything is not clear from the comments inside the config files, please
 open a new issue.
@@ -178,9 +178,9 @@ This project builds upon several principles:
  2. Pretty and useful.
  3. As few dependencies as possible.
  4. Easy to contibute to:
-   * Build with a single command.
-   * Build inside predictive environment.
-   * Test with a single command.
+    * Build with a single command.
+    * Build inside predictive environment.
+    * Test with a single command.
 
 If you encounter any issue, please submit it! I will take a look. The best
 thing to do in the meanwhile is to try fixing it yourself.
