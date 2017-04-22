@@ -67,4 +67,4 @@ show-work:
 
 release:
 	cargo build --target ${TARGET} --release
-	cp -av target/release/${PROJECT_NAME} "${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}"
+	cp -av target/${TARGET}/${PROJECT_NAME} "${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}"
