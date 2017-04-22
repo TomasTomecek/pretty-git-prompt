@@ -1,23 +1,33 @@
+language: rust
+
 dist: trusty
 sudo: required
-language: rust
 services:
-  - docker
+- docker
 
 env:
   global:
-    - PROJECT_NAME=pretty-git-prompt
+  - PROJECT_NAME=pretty-git-prompt
 
-rust:
-  - stable
-  - nightly
-
+matrix:
+  include:
+    - os: osx
+      rust: stable
+      env: TARGET=x86_64-apple-darwin
+    - os: linux
+      rust: stable
+      env: TARGET=x86_64-unknown-linux-gnu
 script:
-  - if [ ${TRAVIS_EVENT_TYPE} = "cron" ] ; then make unstable-environment && make test ; fi
-# matrix:
-#   allow_failures:
-#     - rust: nightly
-# 
-# before_install:
-#   - sudo apt-get update
-#   - sudo apt-get upgrade -y cmake
+- if [ ${TRAVIS_EVENT_TYPE} = "cron" ] ; then make unstable-environment && make test; else cargo test --verbose; fi
+before_deploy:
+- make release
+deploy:
+  provider: releases
+  api_key:
+    secure: J0JjJwZQFLediTBX9Fdi5lGfryXWRIpwyvBIZ8aogo6Yz16FvgU35nomAI9eIdxgTkGzDIhmnk2LxgzKnB7VWB/j2Qc4N+HqP+RDymTKCmG1ywQjNtvk8/u/8WFIYysE/GWyreD6+4R2XGWBk6oiKrpaMXUlpl8/2Cs5jt1eGZff/Moitt5DFmtHuPKPqPZtF2/sfDHMtIRxWqxTVmFP5ydsWh87r7vsQ7KpaPtXs3+dhT4lKh8JBfvbdIrNK0pMaVR0cQctgiK1IAchZxfHjgiz5OwH1vaRtaw/fvTcc8UVuOwV/+0DNCewcMUq8iqALepv3LSlDAlK/5xXt5J5NIGEXMpQbRektSWvvzwzN45859Y+pEnh8s5MNynxJH6NJCYtQ/etwfEhlZ6A9Uj7zGU6LyxYbU9nUzj0v+c28BKCDMAIJ8Q/TCiI1UD49lbZBzcHCVzpUAsFqmNYCBdSgQlqJEPj7ZLplxAJ4h1JkP/mN78zHp9K4v8D+3U8EhMhrlsx5pwiLs0y1vLYMKlyvm/zeQFAX4h9CDeRWFunIlY8QmHtgTDw59xx7mOBcdzE7B3COKtuPBRBdlFiXZPckMZss2IOAw+2oPyQ4XikYDyecAfpeGh3f5NOIZnqTKv2RhY4qVP3mH5hKvZzCaXzzfYS9s2ALlP+L69k1o7uFQo=
+  file: ${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}
+  skip_cleanup: true
+  on:
+    condition: $TRAVIS_RUST_VERSION = stable
+    repo: TomasTomecek/pretty-git-prompt
+    tags: true

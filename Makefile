@@ -63,3 +63,8 @@ shell:
 
 show-work:
 	egrep --color=yes -C 3 "(TODO|FIXME)" $(DEPS) Makefile Dockerfile
+
+
+release:
+	cargo build --target ${TARGET} --release
+	cp -av target/release/${PROJECT_NAME} "${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}"
