@@ -18,7 +18,7 @@ matrix:
       rust: stable
       env: TARGET=x86_64-unknown-linux-gnu
 script:
-- if [ ${TRAVIS_EVENT_TYPE} = "cron" ] ; then make unstable-environment && make test; else cargo test --verbose; fi
+  - hack/ci.sh
 before_deploy:
 - make release
 deploy:
