@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::{File,OpenOptions};
 use std::io;
 use std::io::{Write,Read};
@@ -7,6 +8,7 @@ use constants::{get_default_config_path, CURRENT_CONFIG_VERSION};
 
 use yaml_rust::{YamlLoader, Yaml};
 
+// TODO: get rid of hardcoded |, use separator in values
 static DEFAULT_CONF: &'static str = "---
 # version of configuration file
 # right now it needs to be set to '1'
@@ -14,51 +16,11 @@ version: '1'
 # configuration of various values (required), type dict
 # if you omit a value, it won't be displayed
 values:
-    # the number of untracked files
-    new:
-        # formatting (required), both (pre_format, post_format) are required
-        # you can include coloring in pre_format and reset colors in post_format
-        # you can also include arbitrary string
-        # for more information about setting colors for bash and zsh:
-        # https://wiki.archlinux.org/index.php/zsh#Colors
-        # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Visual-effects
-        # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
-        # this is how the value is formatted in the end:
-        #   [pre_format][value][post_format]
-        # example:
-        #   ✚2
-        pre_format: '✚'
-        post_format: ''
-    # the number of tracked files which were changed in working tree
-    changed:
-        pre_format: 'Δ'
-        post_format: ''
-    # the number of files added to index
-    staged:
-        pre_format: '▶'
-        post_format: ''
-    # during merge, rebase, or others, the numbers files which conflict
-    conflicts:
-        pre_format: '✖'
-        post_format: ''
-    # the number of files present locally which are missing in remote repo
-    difference_ahead:
-        pre_format: '↑'
-        post_format: ''
-    # the number of commits present in remote repo which are missing locally
-    difference_behind:
-        pre_format: '↓'
-        post_format: ''
-
-# monitor status against different remotes (optional), type dict
-# track history divergence
-monitor_remotes:
-      # there are some special values which are substituted:
-      #  * <REMOTE> will be replaced with name of a remote
-      #  * <LOCAL_BRANCH> will be replaced with current branch name
-      #  * <REMOTE_BRANCH> will be replaced with name of remote branch
-    - pre_format: '<LOCAL_BRANCH>'
+    - type: repository_state
+      pre_format: ''
       post_format: ''
+    # monitor status against different remotes - track history divergence
+    - type: remote_difference
       # remote branch name (optional), type string
       # example: 'upstream/master'
       # if omitted look for remotely tracked branch usualy set up with:
@@ -66,9 +28,69 @@ monitor_remotes:
       # remote_branch: ''
       # display the remote even if there is no difference with current branch (required), type bool
       display_if_uptodate: true
-    - remote_branch: 'upstream/master'
+      pre_format: ''
+      post_format: ''
+      # values which can be displayed as part of 'remote_difference'
+      values:
+        - type: name
+          # formatting for remote name and branch name
+          # there are some special values which are substituted:
+          #  * <REMOTE> will be replaced with name of a remote
+          #  * <LOCAL_BRANCH> will be replaced with current branch name
+          #  * <REMOTE_BRANCH> will be replaced with name of remote branch
+          pre_format: '<LOCAL_BRANCH>'
+          post_format: ''
+          # the number of files present locally which are missing in remote repo
+        - type: ahead
+          pre_format: '↑'
+          post_format: ''
+          # the number of commits present in remote repo which are missing locally
+        - type: behind
+          pre_format: '↓'
+          post_format: ''
+    - type: remote_difference
+      remote_branch: 'upstream/master'
       display_if_uptodate: false
-      pre_format: '<REMOTE>'
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<REMOTE>'
+          post_format: ''
+          # the number of files present locally which are missing in remote repo
+        - type: ahead
+          pre_format: '↑'
+          post_format: ''
+          # the number of commits present in remote repo which are missing locally
+        - type: behind
+          pre_format: '↓'
+          post_format: ''
+    # the number of untracked files
+    - type: new
+      # formatting (required), both (pre_format, post_format) are required
+      # you can include coloring in pre_format and reset colors in post_format
+      # you can also include arbitrary string
+      # for more information about setting colors for bash and zsh:
+      # https://wiki.archlinux.org/index.php/zsh#Colors
+      # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Visual-effects
+      # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
+      # this is how the value is formatted in the end:
+      #   [pre_format][value][post_format]
+      # example:
+      #   ✚2
+      pre_format: '✚'
+      post_format: ''
+    # the number of tracked files which were changed in working tree
+    - type: changed
+      pre_format: 'Δ'
+      post_format: ''
+    # the number of files added to index
+    - type: staged
+      pre_format: '▶'
+      post_format: ''
+    # during merge, rebase, or others, the numbers files which conflict
+    - type: conflicts
+      pre_format: '✖'
       post_format: ''
 ";
 
@@ -83,85 +105,88 @@ pub struct RemoteBranch {
     pub remote_name: String,
 }
 
+// #[derive(Debug, Clone)]
+// pub struct RemoteValue {
+//     pub remote_branch: Option<RemoteBranch>,
+//     pub display_if_uptodate: bool,
+//     pub pre_format: String,
+//     pub post_format: String,
+// }
+// 
+// impl MonitoredRemote {
+//     fn new(remote_config: &Yaml) -> MonitoredRemote {
+//         let uptodate: bool;
+//         let display_if_uptodate = &remote_config["display_if_uptodate"];
+//         if display_if_uptodate.is_badvalue() || display_if_uptodate.is_null() {
+//             panic!("'display_if_uptodate' key is required and has to be bool");
+//         }
+//         uptodate = display_if_uptodate.as_bool().unwrap();
+// 
+//         let pre_format: String;
+//         let pre_format_yaml = &remote_config["pre_format"];
+//         if pre_format_yaml.is_badvalue() || pre_format_yaml.is_null() {
+//             panic!("'pre_format' key is required and has to be string");
+//         }
+//         pre_format = String::from(pre_format_yaml.as_str().unwrap());
+// 
+//         let post_format: String;
+//         let post_format_yaml = &remote_config["post_format"];
+//         if post_format_yaml.is_badvalue() || post_format_yaml.is_null() {
+//             panic!("'post_format' key is required and has to be string");
+//         }
+//         post_format = String::from(post_format_yaml.as_str().unwrap());
+// 
+//         let mut rb: Option<RemoteBranch> = None;
+//         let remote_branch = &remote_config["remote_branch"];
+//         if !(remote_branch.is_badvalue() || remote_branch.is_null()) {
+//             let remote_branch_string = remote_branch.as_str().unwrap();
+//             let v: Vec<&str> = remote_branch_string.splitn(2, "/").collect();
+//             if v.len() != 2 {
+//                 panic!("`remote_branch` must be in form of `<REMOTE>/<BRANCH>`");
+//             }
+//             rb = Some(RemoteBranch{ remote_branch: remote_branch_string.to_string(),
+//                                     remote_name: v[0].to_string(),
+//                                     remote_branch_name: v[1].to_string() });
+//         }
+// 
+//         MonitoredRemote{
+//             remote_branch: rb,
+//             display_if_uptodate: uptodate,
+//             pre_format: pre_format,
+//             post_format: post_format
+//         }
+//     }
+// }
+
 #[derive(Debug, Clone)]
-pub struct MonitoredRemote {
-    pub remote_branch: Option<RemoteBranch>,
-    pub display_if_uptodate: bool,
-    pub pre_format: String,
-    pub post_format: String,
-}
-
-impl MonitoredRemote {
-    fn new(remote_config: &Yaml) -> MonitoredRemote {
-        let uptodate: bool;
-        let display_if_uptodate = &remote_config["display_if_uptodate"];
-        if display_if_uptodate.is_badvalue() || display_if_uptodate.is_null() {
-            panic!("'display_if_uptodate' key is required and has to be bool");
-        }
-        uptodate = display_if_uptodate.as_bool().unwrap();
-
-        let pre_format: String;
-        let pre_format_yaml = &remote_config["pre_format"];
-        if pre_format_yaml.is_badvalue() || pre_format_yaml.is_null() {
-            panic!("'pre_format' key is required and has to be string");
-        }
-        pre_format = String::from(pre_format_yaml.as_str().unwrap());
-
-        let post_format: String;
-        let post_format_yaml = &remote_config["post_format"];
-        if post_format_yaml.is_badvalue() || post_format_yaml.is_null() {
-            panic!("'post_format' key is required and has to be string");
-        }
-        post_format = String::from(post_format_yaml.as_str().unwrap());
-
-        let mut rb: Option<RemoteBranch> = None;
-        let remote_branch = &remote_config["remote_branch"];
-        if !(remote_branch.is_badvalue() || remote_branch.is_null()) {
-            let remote_branch_string = remote_branch.as_str().unwrap();
-            let v: Vec<&str> = remote_branch_string.splitn(2, "/").collect();
-            if v.len() != 2 {
-                panic!("`remote_branch` must be in form of `<REMOTE>/<BRANCH>`");
-            }
-            rb = Some(RemoteBranch{ remote_branch: remote_branch_string.to_string(),
-                                    remote_name: v[0].to_string(),
-                                    remote_branch_name: v[1].to_string() });
-        }
-
-        MonitoredRemote{
-            remote_branch: rb,
-            display_if_uptodate: uptodate,
-            pre_format: pre_format,
-            post_format: post_format
-        }
-    }
-}
-
 pub struct Value {
+    pub value_type: String,
     pub pre_format: String,
     pub post_format: String,
+    pub values: Vec<Value>,
+    pub additional_data: HashMap<String, String>
 }
 
 impl Value {
-    fn new(y: &Yaml, key: &str) -> Option<Value> {
-        let ref values_yaml = y["values"];
-        if values_yaml.is_badvalue() || values_yaml.is_null() {
-            panic!("'values' key is required and has to be map")
+    fn new(value_yaml: &Yaml) -> Value {
+        let value_type = match value_yaml["type"].as_str() {
+            Some(s) => s.to_string(),
+            None => panic!("value_type in {:?} is not specified", value_yaml),
+        };
+        let pre_format = match value_yaml["pre_format"].as_str() {
+            Some(s) => s.to_string(),
+            None => panic!("pre_format in {:?} is not specified", value_yaml),
+        };
+        let post_format = match value_yaml["post_format"].as_str() {
+            Some(s) => s.to_string(),
+            None => panic!("post_format in {:?} is not specified", value_yaml),
+        };
+        let values: Vec<Value> = Vec::new();
+        let additional_data: HashMap<String, String> = HashMap::new();
+        Value{
+            value_type: value_type, pre_format: pre_format, post_format: post_format,
+            additional_data: additional_data, values: values
         }
-        let ref value_yaml = values_yaml[key];
-        if value_yaml.is_badvalue() || value_yaml.is_null() {
-            // TODO: debug log here
-            return None;
-        }
-        let mut v = Value{ pre_format: String::from(""), post_format: String::from("") };
-        let ref pre_format_yaml = value_yaml["pre_format"];
-        if !(pre_format_yaml.is_badvalue() || pre_format_yaml.is_null()) {
-            v.pre_format = String::from(pre_format_yaml.as_str().unwrap());
-        }
-        let ref post_format_yaml = value_yaml["post_format"];
-        if !(post_format_yaml.is_badvalue() || post_format_yaml.is_null()) {
-            v.post_format = String::from(post_format_yaml.as_str().unwrap());
-        }
-        Some(v)
     }
 }
 
@@ -188,37 +213,31 @@ impl Conf {
         Conf { c: yaml.clone() }
     }
 
-    pub fn get_new_value(&self) -> Option<Value> {
-        Value::new(&self.c, "new")
-    }
-    pub fn get_changed_value(&self) -> Option<Value> {
-        Value::new(&self.c, "changed")
-    }
-    pub fn get_staged_value(&self) -> Option<Value> {
-        Value::new(&self.c, "staged")
-    }
-    pub fn get_conflicts_value(&self) -> Option<Value> {
-        Value::new(&self.c, "conflicts")
-    }
-    pub fn get_difference_ahead_value(&self) -> Option<Value> {
-        Value::new(&self.c, "difference_ahead")
-    }
-    pub fn get_difference_behind_value(&self) -> Option<Value> {
-        Value::new(&self.c, "difference_behind")
-    }
-
-    pub fn get_remotes_monitoring(&self) -> Option<Vec<MonitoredRemote>> {
-        let ref remotes_yaml = self.c["monitor_remotes"];
-        if remotes_yaml.is_badvalue() || remotes_yaml.is_null() {
+    pub fn get_values(&self) -> Option<Vec<Value>> {
+        let ref values_yaml = self.c["values"];
+        if values_yaml.is_badvalue() || values_yaml.is_null() {
             return None;
         }
-        let remotes = remotes_yaml.as_vec().unwrap();
-        let mut response: Vec <MonitoredRemote> = Vec::new();
-        for y in remotes {
-            response.push(MonitoredRemote::new(y));
+        let values = values_yaml.as_vec().unwrap();
+        let mut response: Vec<Value> = Vec::new();
+        for v in values {
+            response.push(Value::new(v));
         }
         Some(response)
     }
+
+    // pub fn get_remotes_monitoring(&self) -> Option<Vec<MonitoredRemote>> {
+    //     let ref remotes_yaml = self.c["monitor_remotes"];
+    //     if remotes_yaml.is_badvalue() || remotes_yaml.is_null() {
+    //         return None;
+    //     }
+    //     let remotes = remotes_yaml.as_vec().unwrap();
+    //     let mut response: Vec <MonitoredRemote> = Vec::new();
+    //     for y in remotes {
+    //         response.push(MonitoredRemote::new(y));
+    //     }
+    //     Some(response)
+    // }
 }
 
 pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
@@ -295,8 +314,6 @@ mod tests {
         let config_text = "{}";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
         let c = Conf::new(docs[0].clone());
-
-        let o = c.get_new_value();
     }
 
     #[test]
@@ -305,25 +322,6 @@ mod tests {
         let config_text = "version: '1'";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
         let c = Conf::new(docs[0].clone());
-
-        let o = c.get_new_value();
-    }
-
-    #[test]
-    fn test_default_new_value() {
-        let c = get_configuration(None);
-        let o = c.get_new_value();
-        let v = o.unwrap();
-        assert_eq!(v.pre_format, "✚");
-    }
-    #[test]
-    fn test_nonexistent_new_value() {
-        let config_text = "{version: '1', values: {}}";
-        let docs = YamlLoader::load_from_str(config_text).unwrap();
-        let c = Conf::new(docs[0].clone());
-
-        let o = c.get_new_value();
-        assert!(o.is_none());
     }
     // FIXME: this should fail, since new is array
 //     #[test]
@@ -338,99 +336,6 @@ mod tests {
 //         let o = c.get_new_value();
 //         assert!(o.is_none());
 //     }
-    #[test]
-    fn test_some_new_value() {
-        let config_text = "version: '1'
-values:
-    new:
-        pre_format: '%{%F{014}%}+'
-        post_format: '%{%f%}'
-";
-        let docs = YamlLoader::load_from_str(config_text).unwrap();
-        let c = Conf::new(docs[0].clone());
-
-        let o = c.get_new_value();
-        assert!(o.is_some());
-        let v = o.unwrap();
-        assert_eq!(v.pre_format, "%{%F{014}%}+");
-        assert_eq!(v.post_format, "%{%f%}");
-    }
-
-    #[test]
-    fn test_default_changed_symbol() {
-        let c = get_configuration(None);
-        let o = c.get_changed_value();
-        let v = o.unwrap();
-        assert_eq!(v.pre_format, "Δ");
-    }
-    #[test]
-    fn test_default_staged_symbol() {
-        let c = get_configuration(None);
-        let o = c.get_staged_value();
-        let v = o.unwrap();
-        assert_eq!(v.pre_format, "▶");
-    }
-    #[test]
-    fn test_default_conflicts_symbol() {
-        let c = get_configuration(None);
-        let o = c.get_conflicts_value();
-        let v = o.unwrap();
-        assert_eq!(v.pre_format, "✖");
-    }
-    #[test]
-    fn test_difference_ahead_symbol() {
-        let c = get_configuration(None);
-        let o = c.get_difference_ahead_value();
-        let v = o.unwrap();
-        assert_eq!(v.pre_format, "↑");
-    }
-    #[test]
-    fn test_difference_behind_symbol() {
-        let c = get_configuration(None);
-        let o = c.get_difference_behind_value();
-        let v = o.unwrap();
-        assert_eq!(v.pre_format, "↓");
-    }
-
-    #[test]
-    fn test_default_monitored_remotes() {
-        let c = get_configuration(None);
-        let remotes = c.get_remotes_monitoring().unwrap();
-        let ref origin = remotes[0];
-        assert_eq!(origin.display_if_uptodate, true);
-        let ref upstream = remotes[1];
-        assert_eq!(upstream.display_if_uptodate, false);
-        let b_struct_opt = upstream.remote_branch.clone();
-        let b_struct = b_struct_opt.unwrap();
-        assert_eq!(b_struct.remote_branch, "upstream/master");
-    }
-    #[test]
-    fn test_monitored_remotes_ordering() {
-        let config_text = "version: '1'
-monitor_remotes:
-    - remote_branch: x/x
-      display_if_uptodate: true
-      pre_format: ''
-      post_format: ''
-    - remote_branch: y/y
-      display_if_uptodate: true
-      pre_format: ''
-      post_format: ''
-    - remote_branch: z/z
-      display_if_uptodate: true
-      pre_format: ''
-      post_format: ''
-";
-        let docs = YamlLoader::load_from_str(config_text).unwrap();
-        let c = Conf::new(docs[0].clone());
-
-        let remotes = c.get_remotes_monitoring().unwrap();
-        let mut iter = remotes.iter();
-        assert_eq!(iter.next().unwrap().clone().remote_branch.unwrap().remote_branch, "x/x");
-        assert_eq!(iter.next().unwrap().clone().remote_branch.unwrap().remote_branch, "y/y");
-        assert_eq!(iter.next().unwrap().clone().remote_branch.unwrap().remote_branch, "z/z");
-    }
-
     #[allow(unused_must_use)]
     #[test]
     fn test_create_default_config() {

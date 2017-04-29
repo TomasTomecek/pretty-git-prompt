@@ -12,6 +12,7 @@ struct Cache {
     // TODO: Reference can't be cached (can't be cloned)
     //       implement via OID
     // head: RefCell<Option<Oid>>,
+    file_statuses: RefCell<Option<HashMap<String, u32>>>
 }
 
 pub struct Backend {
@@ -46,7 +47,10 @@ struct RefPair {
 
 impl Cache {
     pub fn new() -> Cache {
-        Cache{ current_branch_name: RefCell::new(None) }
+        Cache{
+            current_branch_name: RefCell::new(None),
+            file_statuses: RefCell::new(None),
+        }
     }
 
     fn set_current_branch_name(&self, n: Option<String>) {
@@ -60,6 +64,19 @@ impl Cache {
 
     fn get_current_branch(&self) -> Option<String> {
         self.current_branch_name.borrow().clone()
+    }
+
+    fn set_file_statuses(&self, n: Option<HashMap<String, u32>>) {
+        let mut c = self.file_statuses.borrow_mut();
+        *c = n;
+    }
+
+    fn is_file_statuses_set(&self) -> bool {
+        self.file_statuses.borrow().is_some()
+    }
+
+    fn get_file_statuses(&self) -> Option<HashMap<String, u32>> {
+        self.file_statuses.borrow().clone()
     }
 }
 
@@ -308,7 +325,10 @@ impl Backend {
         }
     }
 
-    pub fn get_file_status(&self) -> Option<HashMap<&str, u32>> {
+    pub fn get_file_status(&self) -> Option<HashMap<String, u32>> {
+        if self.cache.is_file_statuses_set() {
+            return self.cache.get_file_statuses();
+        }
         let mut d = HashMap::new();
 
         let changed = STATUS_WT_MODIFIED | STATUS_WT_DELETED | STATUS_WT_TYPECHANGE | STATUS_WT_RENAMED;
@@ -324,22 +344,23 @@ impl Backend {
             log!(self, "{}", s.path().unwrap());
 
             if file_status.intersects(changed) {
-                let counter = d.entry(CHANGED_KEY).or_insert(0);
+                let counter = d.entry(CHANGED_KEY.to_string()).or_insert(0);
                 *counter += 1;
             };
             if file_status.contains(STATUS_WT_NEW) {
-                let counter = d.entry(NEW_KEY).or_insert(0);
+                let counter = d.entry(NEW_KEY.to_string()).or_insert(0);
                 *counter += 1;
             };
             if file_status.intersects(staged) {
-                let counter = d.entry(STAGED_KEY).or_insert(0);
+                let counter = d.entry(STAGED_KEY.to_string()).or_insert(0);
                 *counter += 1;
             };
             if file_status.intersects(STATUS_CONFLICTED) {
-                let counter = d.entry(CONFLICTS_KEY).or_insert(0);
+                let counter = d.entry(CONFLICTS_KEY.to_string()).or_insert(0);
                 *counter += 1;
             };
         }
+        self.cache.set_file_statuses(Some(d.clone()));
         Some(d)
     }
 }
