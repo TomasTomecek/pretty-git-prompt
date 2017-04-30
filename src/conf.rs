@@ -5,8 +5,10 @@ use std::io::{Write,Read};
 use std::path::{Path,PathBuf};
 
 use constants::{get_default_config_path, CURRENT_CONFIG_VERSION};
+use models::{Display,DisplayMaster};
 
 use yaml_rust::{YamlLoader, Yaml};
+
 
 // TODO: get rid of hardcoded |, use separator in values
 static DEFAULT_CONF: &'static str = "---
@@ -158,44 +160,13 @@ pub struct RemoteBranch {
 //     }
 // }
 
-#[derive(Debug, Clone)]
-pub struct Value {
-    pub value_type: String,
-    pub pre_format: String,
-    pub post_format: String,
-    pub values: Vec<Value>,
-    pub additional_data: HashMap<String, String>
-}
-
-impl Value {
-    fn new(value_yaml: &Yaml) -> Value {
-        let value_type = match value_yaml["type"].as_str() {
-            Some(s) => s.to_string(),
-            None => panic!("value_type in {:?} is not specified", value_yaml),
-        };
-        let pre_format = match value_yaml["pre_format"].as_str() {
-            Some(s) => s.to_string(),
-            None => panic!("pre_format in {:?} is not specified", value_yaml),
-        };
-        let post_format = match value_yaml["post_format"].as_str() {
-            Some(s) => s.to_string(),
-            None => panic!("post_format in {:?} is not specified", value_yaml),
-        };
-        let values: Vec<Value> = Vec::new();
-        let additional_data: HashMap<String, String> = HashMap::new();
-        Value{
-            value_type: value_type, pre_format: pre_format, post_format: post_format,
-            additional_data: additional_data, values: values
-        }
-    }
-}
-
 pub struct Conf {
     c: Yaml,
+    display_master: DisplayMaster,
 }
 
 impl Conf {
-    pub fn new(yaml: Yaml) -> Conf {
+    pub fn new(yaml: Yaml, display_master: DisplayMaster) -> Conf {
         let y_ref = &yaml;
         let version = &y_ref["version"];
         if version.is_badvalue() || version.is_null() {
@@ -210,20 +181,25 @@ impl Conf {
             },
             None => panic!("'version' should be string: {:?}", version),
         }
-        Conf { c: yaml.clone() }
+        Conf { c: yaml.clone(), display_master: display_master }
     }
 
-    pub fn get_values(&self) -> Option<Vec<Value>> {
+    pub fn populate_values(&mut self) -> Vec<String> {
         let ref values_yaml = self.c["values"];
         if values_yaml.is_badvalue() || values_yaml.is_null() {
-            return None;
+            panic!("No values to display.");
         }
         let values = values_yaml.as_vec().unwrap();
-        let mut response: Vec<Value> = Vec::new();
+        // let mut response: Vec<Value> = Vec::new();
+        let mut out: Vec<String> = Vec::new();
         for v in values {
-            response.push(Value::new(v));
+            // response.push(Value::new(v));
+            match self.display_master.display_value(v) {
+                Some(s) => out.push(s),
+                None => ()
+            }
         }
-        Some(response)
+        out.clone()
     }
 
     // pub fn get_remotes_monitoring(&self) -> Option<Vec<MonitoredRemote>> {
@@ -252,7 +228,7 @@ pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, i
     }
 }
 
-pub fn get_configuration(supplied_conf_path: Option<String>) -> Conf {
+pub fn get_configuration(supplied_conf_path: Option<String>, display_master: DisplayMaster) -> Conf {
     let content: String;
     if supplied_conf_path.is_some() {
         content = match load_configuration_from_file(supplied_conf_path.unwrap()) {
@@ -277,7 +253,7 @@ pub fn get_configuration(supplied_conf_path: Option<String>) -> Conf {
         };
     }
     let docs = YamlLoader::load_from_str(&content).unwrap();
-    Conf::new(docs[0].clone())
+    Conf::new(docs[0].clone(), display_master)
 }
 
 pub fn create_default_config(path: PathBuf) -> Result<String, io::Error> {

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::collections::HashMap;
 use std::cell::RefCell;
 
@@ -7,6 +8,7 @@ use constants::{CHANGED_KEY,NEW_KEY,STAGED_KEY,CONFLICTS_KEY};
 use git2::*;
 
 
+#[derive(Debug, Clone)]
 struct Cache {
     current_branch_name: RefCell<Option<String>>,
     // TODO: Reference can't be cached (can't be cloned)
@@ -20,6 +22,13 @@ pub struct Backend {
     pub repo: Repository,
     pub debug: bool,
 }
+
+impl fmt::Debug for Backend {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Backend {{ cache: {:?}, repo: ?, debug: {:?} }}", self.cache, self.debug)
+    }
+}
+
 
 pub struct BranchAheadBehind {
     pub local_branch_name: Option<String>,

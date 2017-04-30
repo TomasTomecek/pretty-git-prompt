@@ -5,8 +5,9 @@ extern crate yaml_rust;
 use backend::Backend;
 use cli::cli;
 use conf::{RemoteBranch};
-use conf::{Conf,get_configuration,create_default_config,Value};
+use conf::{Conf,get_configuration,create_default_config};
 use constants::*;
+use models::{DisplayMaster,Display};
 
 use std::collections::HashMap;
 
@@ -19,11 +20,8 @@ mod backend;
 mod cli;
 mod conf;
 mod constants;
+mod models;
 
-
-fn format_value(value: &Value, data: &str) -> String {
-    format!("{}{}{}", value.pre_format, data, value.post_format)
-}
 
 fn substiute_special_values(s: String, values: &HashMap<String, String>) -> String {
     let mut r:String = s;
@@ -32,93 +30,16 @@ fn substiute_special_values(s: String, values: &HashMap<String, String>) -> Stri
     }
     r
 }
-
-
-// is able to display values, which makes him a master
-struct DisplayMaster {
-    backend: Backend,
-    debug: bool,
-}
-
-impl DisplayMaster {
-    pub fn new(backend: Backend, debug: bool) -> DisplayMaster {
-        DisplayMaster { backend: backend, debug: debug }
-    }
-
-    fn display_repository_state(&self, value: &Value) -> Option<String> {
-        log!(self, "display repository state, value: {:?}", value);
-        let repo_state = self.backend.get_repository_state();
-        // TODO: implement configuration for is_empty
-        if !repo_state.is_empty() {
-            return Some(format_value(value, &repo_state));
-        }
-        None
-    }
-
-    // get # of files for specific type
-    fn get_file_status_for_type(&self, t: &str) -> Option<u32> {
-        if let Some(s) = self.backend.get_file_status() {
-            if !s.is_empty() {
-                return s.get(t).cloned()
-            }
-        }
-        None
-    }
-
-
-    fn display_new(&self, value: &Value) -> Option<String> {
-        if let Some(x) = self.get_file_status_for_type(NEW_KEY) {
-            return Some(format_value(value, &format!("{}", x)));
-        }
-        None
-    }
-
-    fn display_changed(&self, value: &Value) -> Option<String> {
-        if let Some(x) = self.get_file_status_for_type(CHANGED_KEY) {
-            return Some(format_value(value, &format!("{}", x)));
-        }
-        None
-    }
-
-    fn display_staged(&self, value: &Value) -> Option<String> {
-        if let Some(x) = self.get_file_status_for_type(STAGED_KEY) {
-            return Some(format_value(value, &format!("{}", x)));
-        }
-        None
-    }
-
-    fn display_conflicts(&self, value: &Value) -> Option<String> {
-        if let Some(x) = self.get_file_status_for_type(CONFLICTS_KEY) {
-            return Some(format_value(value, &format!("{}", x)));
-        }
-        None
-    }
-
-    // display selected value
-    fn display(&self, value: &Value) -> Option<String> {
-        let value_type: &str = &value.value_type;
-        match value_type {
-            "repository_state" => self.display_repository_state(value),
-            "new" => self.display_new(value),
-            "changed" => self.display_changed(value),
-            "staged" => self.display_staged(value),
-            "conflicts" => self.display_conflicts(value),
-            _ => None,  // panic!("Unknown value type: {:?}", value)
-        }
-    }
-}
-
-
 // logic of the whole program -- the glue
 struct Program {
     conf: Conf,
-    display_master: DisplayMaster,
+    out: Vec<String>,
     debug: bool
 }
 
 impl Program {
-    pub fn new(conf: Conf, dm: DisplayMaster, debug: bool) -> Program {
-        Program { conf: conf, display_master: dm, debug: debug }
+    pub fn new(conf: Conf, out: Vec<String>, debug: bool) -> Program {
+        Program { conf: conf, out: out, debug: debug }
     }
 
     // fn add_monitored_branches_state(&mut self) {
@@ -174,25 +95,25 @@ impl Program {
     //     }
     // }
 
-    fn display_values(&mut self) {
-        let mut out: Vec<String> = Vec::new();
-        let values = match self.conf.get_values() {
-            Some(v) => v,
-            None => panic!("No values present in configuration, nothing to display."),
-        };
-        for value in values {
-            match self.display_master.display(&value) {
-                Some(v) => out.push(v),
-                None => ()
-            };
-        }
-        self.output(out);
-    }
+    // fn display_values(&mut self) {
+    //     let mut out: Vec<String> = Vec::new();
+    //     let values = match self.conf.get_values() {
+    //         Some(v) => v,
+    //         None => panic!("No values present in configuration, nothing to display."),
+    //     };
+    //     for value in values {
+    //         match self.display_master.display(&value) {
+    //             Some(v) => out.push(v),
+    //             None => ()
+    //         };
+    //     }
+    //     self.output(out);
+    // }
 
     // print output buffer
-    fn output(&self, out: Vec<String>) {
-        log!(self, "# of blocks = {}", out.len());
-        let output = out.join("|");
+    fn output(&self) {
+        log!(self, "# of blocks = {}", self.out.len());
+        let output = self.out.join("|");
         if self.debug {
             println!("'{}'", output);
         } else {
@@ -223,8 +144,6 @@ fn main() {
         None
     };
 
-    let conf = get_configuration(conf_path);
-
     if matches.is_present(CLI_DEFAULT_CONFIG_SUBC_NAME) {
         let p = get_default_config_path();
         match create_default_config(p.clone()) {
@@ -240,8 +159,9 @@ fn main() {
     }
 
     let backend = Backend::new(repo, debug_enabled);
-    let dm = DisplayMaster::new(backend, debug_enabled);
-    let mut output = Program::new(conf, dm, debug_enabled);
-
-    output.display_values();
+    let dm: DisplayMaster = DisplayMaster::new(backend, debug_enabled);
+    let mut conf: Conf = get_configuration(conf_path, dm);
+    let out: Vec<String> = conf.populate_values();
+    let mut output = Program::new(conf, out, debug_enabled);
+    output.output();
 }
