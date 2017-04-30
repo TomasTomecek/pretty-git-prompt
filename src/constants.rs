@@ -41,6 +41,7 @@ pub fn get_default_config_path() -> PathBuf {
 
 mod tests {
     use std::ffi::OsStr;
+    use constants::{get_default_config_path,DEFAULT_CONFIG_NAME};
 
     #[test]
     fn test_default_config_path() {

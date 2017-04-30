@@ -201,40 +201,38 @@ pub fn create_default_config(path: PathBuf) -> Result<String, io::Error> {
 
 
 mod tests {
+    // We'll use this git repo for testing
     use std::fs::{File,OpenOptions,remove_file};
     use std::io::{Write,Read};
     use std::path::{Path,PathBuf};
     use conf::{get_configuration,create_default_config,DEFAULT_CONF,Conf};
     use yaml_rust::{YamlLoader, Yaml};
+    use backend::Backend;
+    use models::DisplayMaster;
+    use git2::Repository;
 
     #[test]
     #[should_panic(expected = "'version' is missing in config file.")]
     fn test_empty_config() {
         let config_text = "{}";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
-        let c = Conf::new(docs[0].clone());
+        let repo = Repository::discover(".").unwrap();
+        let backend = Backend::new(repo, true);
+        let dm: DisplayMaster = DisplayMaster::new(backend, true);
+        let c = Conf::new(docs[0].clone(), dm);
     }
 
     #[test]
-    #[should_panic(expected = "'values' key is required and has to be map")]
     fn test_values_is_present() {
-        let config_text = "version: '1'";
+        let config_text = "version: '1'
+values: []";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
-        let c = Conf::new(docs[0].clone());
+        let repo = Repository::discover(".").unwrap();
+        let backend = Backend::new(repo, true);
+        let dm: DisplayMaster = DisplayMaster::new(backend, true);
+        let c = Conf::new(docs[0].clone(), dm);
     }
-    // FIXME: this should fail, since new is array
-//     #[test]
-//     #[should_panic(expected = "asd")]
-//     fn test_empty_new_value() {
-//         let config_text = "version: '1'
-// values:
-//     new: []";
-//         let docs = YamlLoader::load_from_str(config_text).unwrap();
-//         let c = Conf::new(docs[0].clone());
-// 
-//         let o = c.get_new_value();
-//         assert!(o.is_none());
-//     }
+
     #[allow(unused_must_use)]
     #[test]
     fn test_create_default_config() {
@@ -278,7 +276,10 @@ mod tests {
         let result = create_default_config(p.clone());
         assert!(result.is_ok());
 
-        let c = get_configuration(None);
+        let repo = Repository::discover(".").unwrap();
+        let backend = Backend::new(repo, true);
+        let dm: DisplayMaster = DisplayMaster::new(backend, true);
+        let c = get_configuration(None, dm);
 
         remove_file(p.clone());
     }
@@ -288,6 +289,9 @@ mod tests {
     fn test_lower_version() {
         let config_text = "version: '0'";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
-        let c = Conf::new(docs[0].clone());
+        let repo = Repository::discover(".").unwrap();
+        let backend = Backend::new(repo, true);
+        let dm: DisplayMaster = DisplayMaster::new(backend, true);
+        let c = Conf::new(docs[0].clone(), dm);
     }
 }
