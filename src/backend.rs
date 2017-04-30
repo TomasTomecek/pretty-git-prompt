@@ -2,11 +2,21 @@ use std::fmt;
 use std::collections::HashMap;
 use std::cell::RefCell;
 
-use conf::{RemoteBranch};
 use constants::{CHANGED_KEY,NEW_KEY,STAGED_KEY,CONFLICTS_KEY};
 
 use git2::*;
 
+
+#[derive(Debug, Clone)]
+pub struct RemoteBranch {
+    // upstream/master
+    // this is the name git is using
+    pub remote_branch: String,
+    // master
+    pub remote_branch_name: String,
+    // upstream
+    pub remote_name: String,
+}
 
 #[derive(Debug, Clone)]
 struct Cache {
@@ -30,6 +40,7 @@ impl fmt::Debug for Backend {
 }
 
 
+#[derive(Clone)]
 pub struct BranchAheadBehind {
     pub local_branch_name: Option<String>,
     pub remote_branch_name: Option<String>,
@@ -180,7 +191,7 @@ impl Backend {
         }
     }
 
-    pub fn get_current_branch_name(&mut self) -> Option<String> {
+    pub fn get_current_branch_name(&self) -> Option<String> {
         if self.cache.is_current_branch_set() {
             return self.cache.get_current_branch();
         }
@@ -253,7 +264,7 @@ impl Backend {
         }
     }
 
-    pub fn get_branch_ahead_behind(&mut self, remote_branch: Option<RemoteBranch>) -> Option<BranchAheadBehind> {
+    pub fn get_branch_ahead_behind(&self, remote_branch: Option<RemoteBranch>) -> Option<BranchAheadBehind> {
         let current_branch_name = self.get_current_branch_name();
         log!(self, "Current branch name = {:?}", current_branch_name);
         let mut ab = BranchAheadBehind::new(current_branch_name);

@@ -95,69 +95,6 @@ values:
       post_format: ''
 ";
 
-#[derive(Debug, Clone)]
-pub struct RemoteBranch {
-    // upstream/master
-    // this is the name git is using
-    pub remote_branch: String,
-    // master
-    pub remote_branch_name: String,
-    // upstream
-    pub remote_name: String,
-}
-
-// #[derive(Debug, Clone)]
-// pub struct RemoteValue {
-//     pub remote_branch: Option<RemoteBranch>,
-//     pub display_if_uptodate: bool,
-//     pub pre_format: String,
-//     pub post_format: String,
-// }
-// 
-// impl MonitoredRemote {
-//     fn new(remote_config: &Yaml) -> MonitoredRemote {
-//         let uptodate: bool;
-//         let display_if_uptodate = &remote_config["display_if_uptodate"];
-//         if display_if_uptodate.is_badvalue() || display_if_uptodate.is_null() {
-//             panic!("'display_if_uptodate' key is required and has to be bool");
-//         }
-//         uptodate = display_if_uptodate.as_bool().unwrap();
-// 
-//         let pre_format: String;
-//         let pre_format_yaml = &remote_config["pre_format"];
-//         if pre_format_yaml.is_badvalue() || pre_format_yaml.is_null() {
-//             panic!("'pre_format' key is required and has to be string");
-//         }
-//         pre_format = String::from(pre_format_yaml.as_str().unwrap());
-// 
-//         let post_format: String;
-//         let post_format_yaml = &remote_config["post_format"];
-//         if post_format_yaml.is_badvalue() || post_format_yaml.is_null() {
-//             panic!("'post_format' key is required and has to be string");
-//         }
-//         post_format = String::from(post_format_yaml.as_str().unwrap());
-// 
-//         let mut rb: Option<RemoteBranch> = None;
-//         let remote_branch = &remote_config["remote_branch"];
-//         if !(remote_branch.is_badvalue() || remote_branch.is_null()) {
-//             let remote_branch_string = remote_branch.as_str().unwrap();
-//             let v: Vec<&str> = remote_branch_string.splitn(2, "/").collect();
-//             if v.len() != 2 {
-//                 panic!("`remote_branch` must be in form of `<REMOTE>/<BRANCH>`");
-//             }
-//             rb = Some(RemoteBranch{ remote_branch: remote_branch_string.to_string(),
-//                                     remote_name: v[0].to_string(),
-//                                     remote_branch_name: v[1].to_string() });
-//         }
-// 
-//         MonitoredRemote{
-//             remote_branch: rb,
-//             display_if_uptodate: uptodate,
-//             pre_format: pre_format,
-//             post_format: post_format
-//         }
-//     }
-// }
 
 pub struct Conf {
     c: Yaml,
@@ -200,19 +137,6 @@ impl Conf {
         }
         out.clone()
     }
-
-    // pub fn get_remotes_monitoring(&self) -> Option<Vec<MonitoredRemote>> {
-    //     let ref remotes_yaml = self.c["monitor_remotes"];
-    //     if remotes_yaml.is_badvalue() || remotes_yaml.is_null() {
-    //         return None;
-    //     }
-    //     let remotes = remotes_yaml.as_vec().unwrap();
-    //     let mut response: Vec <MonitoredRemote> = Vec::new();
-    //     for y in remotes {
-    //         response.push(MonitoredRemote::new(y));
-    //     }
-    //     Some(response)
-    // }
 }
 
 pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {

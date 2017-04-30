@@ -1,5 +1,4 @@
 use std::env;
-use std::ffi::OsStr;
 use std::fs::create_dir_all;
 use std::path::{PathBuf};
 
@@ -30,15 +29,24 @@ pub fn get_default_config_path() -> PathBuf {
             }
         }
     };
-    create_dir_all(p.to_str().unwrap());
+    let p_clone = p.clone();  // fighting borrow checker hard
+    let d = p_clone.to_str().unwrap();
+    match create_dir_all(d) {
+        Ok(_) => (),
+        Err(e) => panic!("Unable to create directory for confi: {}: {:?}", d, e),
+    };
     p.push(DEFAULT_CONFIG_NAME);
     p
 }
 
-#[test]
-fn test_default_config_path() {
-    // FIXME: create test dir and remove it aftet testing
-    let p = get_default_config_path();
-    assert!(p.parent().unwrap().exists());
-    assert_eq!(p.file_name().unwrap(), OsStr::new(DEFAULT_CONFIG_NAME));
+mod tests {
+    use std::ffi::OsStr;
+
+    #[test]
+    fn test_default_config_path() {
+        // FIXME: create test dir and remove it aftet testing
+        let p = get_default_config_path();
+        assert!(p.parent().unwrap().exists());
+        assert_eq!(p.file_name().unwrap(), OsStr::new(DEFAULT_CONFIG_NAME));
+    }
 }
