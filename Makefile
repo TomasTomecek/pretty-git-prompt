@@ -3,6 +3,8 @@
 #
 # stable container is meant to be used
 # unstable is meant for development & testing
+#
+# TODO: cache build container
 
 .PHONY=default compile build stable-environment unstable-environment stable-build unstable-build exec-stable-build exec-unstable-build test exec-test
 RUST_STABLE_SPEC="1.15.1"
