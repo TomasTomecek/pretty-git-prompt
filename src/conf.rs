@@ -4,12 +4,11 @@ use std::io::{Write,Read};
 use std::path::{Path,PathBuf};
 
 use constants::{get_default_config_path, CURRENT_CONFIG_VERSION};
-use models::{Display,DisplayMaster};
+use models::{DisplayMaster,SimpleValue};
 
 use yaml_rust::{YamlLoader, Yaml};
 
 
-// TODO: get rid of hardcoded |, use separator in values
 static DEFAULT_CONF: &'static str = "---
 # version of configuration file
 # right now it needs to be set to '1'
@@ -20,11 +19,16 @@ values:
     - type: repository_state
       pre_format: ''
       post_format: ''
+    # this is used to separate values between each other
+    # if there is no value displayed before or after separator, separator is not displayed either
+    - type: separator
+      pre_format: '│'
+      post_format: ''
     # monitor status against different remotes - track history divergence
     - type: remote_difference
       # remote branch name (optional), type string
       # example: 'upstream/master'
-      # if omitted look for remotely tracked branch usualy set up with:
+      # if omitted look for remotely tracked branch usually set up with:
       #   git branch --set-upstream-to
       # remote_branch: ''
       # display the remote even if there is no difference with current branch (required), type bool
@@ -49,6 +53,9 @@ values:
         - type: behind
           pre_format: '↓'
           post_format: ''
+    - type: separator
+      pre_format: '│'
+      post_format: ''
     - type: remote_difference
       remote_branch: 'upstream/master'
       display_if_uptodate: false
@@ -67,6 +74,9 @@ values:
           pre_format: '↓'
           post_format: ''
     # the number of untracked files
+    - type: separator
+      pre_format: '│'
+      post_format: ''
     - type: new
       # formatting (required), both (pre_format, post_format) are required
       # you can include coloring in pre_format and reset colors in post_format
@@ -120,18 +130,41 @@ impl Conf {
         Conf { c: yaml.clone(), display_master: display_master }
     }
 
-    pub fn populate_values(&mut self) -> Vec<String> {
+    // TODO: create a function to return list of structs and pass that to display master
+    pub fn populate_values(&mut self) -> String {
         let ref values_yaml = self.c["values"];
         if values_yaml.is_badvalue() || values_yaml.is_null() {
             panic!("No values to display.");
         }
         let values = values_yaml.as_vec().unwrap();
-        // let mut response: Vec<Value> = Vec::new();
-        let mut out: Vec<String> = Vec::new();
+        let mut out: String = String::new();
+        // was there a previous value already displayed?
+        let mut prev_was_set = false;
+        // are we suppose to display a separator?
+        let mut separator_pending: Option<String> = None;
+
         for v in values {
-            // response.push(Value::new(v));
-            match self.display_master.display_value(v) {
-                Some(s) => out.push(s),
+            let simple_value = SimpleValue::new(&v);
+            match self.display_master.display_value(&v, &simple_value) {
+                Some(s) => {
+                    if simple_value.value_type.as_str() == "separator" {
+                        separator_pending = Some(s);
+                    } else {
+                        // add separator if it is needed
+                        match separator_pending.clone() {
+                            Some(separator) => {
+                                if prev_was_set {
+                                    // println!("add separator {:?}", simple_value);
+                                    out += &separator;
+                                    separator_pending = None;
+                                }
+                            },
+                            None => (),
+                        }
+                        out += &s;
+                        prev_was_set = true;
+                    }
+                },
                 None => ()
             }
         }
@@ -206,7 +239,7 @@ mod tests {
     use std::io::{Write,Read};
     use std::path::{Path,PathBuf};
     use conf::{get_configuration,create_default_config,DEFAULT_CONF,Conf};
-    use yaml_rust::{YamlLoader, Yaml};
+    use yaml_rust::{YamlLoader};
     use backend::Backend;
     use models::DisplayMaster;
     use git2::Repository;
@@ -219,7 +252,7 @@ mod tests {
         let repo = Repository::discover(".").unwrap();
         let backend = Backend::new(repo, true);
         let dm: DisplayMaster = DisplayMaster::new(backend, true);
-        let c = Conf::new(docs[0].clone(), dm);
+        Conf::new(docs[0].clone(), dm);
     }
 
     #[test]
@@ -230,7 +263,7 @@ values: []";
         let repo = Repository::discover(".").unwrap();
         let backend = Backend::new(repo, true);
         let dm: DisplayMaster = DisplayMaster::new(backend, true);
-        let c = Conf::new(docs[0].clone(), dm);
+        Conf::new(docs[0].clone(), dm);
     }
 
     #[allow(unused_must_use)]
@@ -292,6 +325,6 @@ values: []";
         let repo = Repository::discover(".").unwrap();
         let backend = Backend::new(repo, true);
         let dm: DisplayMaster = DisplayMaster::new(backend, true);
-        let c = Conf::new(docs[0].clone(), dm);
+        Conf::new(docs[0].clone(), dm);
     }
 }

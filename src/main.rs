@@ -20,29 +20,6 @@ mod constants;
 mod models;
 
 
-// logic of the whole program -- the glue
-struct Program {
-    out: Vec<String>,
-    debug: bool
-}
-
-impl Program {
-    pub fn new(out: Vec<String>, debug: bool) -> Program {
-        Program { out: out, debug: debug }
-    }
-
-    // print output buffer
-    fn output(&self) {
-        log!(self, "# of blocks = {}", self.out.len());
-        let output = self.out.join("|");
-        if self.debug {
-            println!("'{}'", output);
-        } else {
-            println!("{}", output);
-        }
-    }
-}
-
 fn main() {
     let app = cli();
     let matches = app.get_matches();
@@ -82,7 +59,6 @@ fn main() {
     let backend = Backend::new(repo, debug_enabled);
     let dm: DisplayMaster = DisplayMaster::new(backend, debug_enabled);
     let mut conf: Conf = get_configuration(conf_path, dm);
-    let out: Vec<String> = conf.populate_values();
-    let output = Program::new(out, debug_enabled);
-    output.output();
+    let out: String = conf.populate_values();
+    println!("{}", out);
 }

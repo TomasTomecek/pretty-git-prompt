@@ -37,7 +37,7 @@ pub struct SimpleValue {
 }
 
 impl SimpleValue {
-    fn new(value_yaml: &Yaml) -> SimpleValue {
+    pub fn new(value_yaml: &Yaml) -> SimpleValue {
         let value_type = match value_yaml["type"].as_str() {
             Some(s) => s.to_string(),
             None => panic!("value_type in {:?} is not specified", value_yaml),
@@ -53,6 +53,28 @@ impl SimpleValue {
         SimpleValue{
             value_type: value_type, pre_format: pre_format, post_format: post_format,
         }
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct Separator {
+    debug: bool,
+    value: SimpleValue,
+}
+
+impl Separator {
+    fn new(simple_value: &SimpleValue, debug: bool) -> Separator {
+        Separator{
+            value: simple_value.clone(), debug: debug
+        }
+    }
+}
+
+impl Display for Separator {
+    fn display(&self) -> Option<String> {
+        log!(self, "display separator, value: {:?}", self);
+        Some(format_value(&self.value.pre_format, &self.value.post_format, ""))
     }
 }
 
@@ -78,10 +100,9 @@ impl<'a> Display for RepoStatus<'a> {
 }
 
 impl<'a> RepoStatus<'a> {
-    fn new(value_yaml: &Yaml, backend: &'a Backend, debug: bool) -> RepoStatus<'a> {
-        let simple_value = SimpleValue::new(value_yaml);
+    fn new(simple_value: &SimpleValue, backend: &'a Backend, debug: bool) -> RepoStatus<'a> {
         RepoStatus{
-            value: simple_value, backend: backend, debug: debug
+            value: simple_value.clone(), backend: backend, debug: debug
         }
     }
 }
@@ -123,10 +144,9 @@ impl<'a> FileStatus<'a> {
         None
     }
 
-    fn new(value_yaml: &Yaml, backend: &'a Backend, debug: bool) -> FileStatus<'a> {
-        let simple_value = SimpleValue::new(value_yaml);
+    fn new(simple_value: &SimpleValue, backend: &'a Backend, debug: bool) -> FileStatus<'a> {
         FileStatus{
-            value: simple_value, backend: backend, debug: debug
+            value: simple_value.clone(), backend: backend, debug: debug
         }
     }
 }
@@ -148,7 +168,7 @@ impl<'a> Display for RemoteTracking<'a> {
         log!(self, "display remote_difference: {:?}", self);
 
         let a_b: BranchAheadBehind = match self.backend.get_branch_ahead_behind(
-                self.remote_branch.clone()) {
+            self.remote_branch.clone()) {
             Some(x) => x,
             None => {
                 panic!("no ahead behind stats found for = {:?}", self.remote_branch);
@@ -175,19 +195,23 @@ impl<'a> Display for RemoteTracking<'a> {
         let mut response: String = "".to_string();
         for value in self.values.clone() {
             match self.display_value(value.clone(), a_b.clone(),
-                                      special_values.clone()) {
+                                     special_values.clone()) {
                 Some(s) => response += &s,
                 None => (),
             }
         }
-        Some(response)
+        if response.len() > 0 {
+            Some(response)
+        } else {
+            None
+        }
     }
 }
 
 
 impl<'a> RemoteTracking<'a> {
-    fn new(value_yaml: &Yaml, backend: &'a Backend, debug: bool) -> RemoteTracking<'a> {
-        let simple_value = SimpleValue::new(value_yaml);
+    fn new(value_yaml: &Yaml, simple_value: &SimpleValue,
+           backend: &'a Backend, debug: bool) -> RemoteTracking<'a> {
         let remote_branch: Option<RemoteBranch> = match value_yaml["remote_branch"].as_str() {
             Some(s) => {
                 let remote_branch_string = s.to_string();
@@ -220,7 +244,7 @@ impl<'a> RemoteTracking<'a> {
             None => panic!("values is empty: {:?}", value_yaml),
         };
         RemoteTracking{
-            value: simple_value, backend: backend, debug: debug,
+            value: simple_value.clone(), backend: backend, debug: debug,
             display_if_uptodate: display_if_uptodate, values: values,
             remote_branch: remote_branch
         }
@@ -275,20 +299,16 @@ impl DisplayMaster {
         DisplayMaster { backend: backend, debug: debug }
     }
 
-    pub fn display_value(&self, value_yaml: &Yaml) -> Option<String> {
-        let value_type = match value_yaml["type"].as_str() {
-            Some(s) => s,
-            None => panic!("value_type in {:?} is not specified", value_yaml),
-        };
-
-        let o: Option<String> = match value_type {
-            "repository_state" => RepoStatus::new(value_yaml, &self.backend, self.debug).display(),
+    pub fn display_value(&self, value_yaml: &Yaml, simple_value: &SimpleValue) -> Option<String> {
+        let o: Option<String> = match simple_value.value_type.as_str() {
+            "repository_state" => RepoStatus::new(&simple_value, &self.backend, self.debug).display(),
             "new" |
             "changed" |
             "staged" |
-            "conflicts" => FileStatus::new(value_yaml, &self.backend, self.debug).display(),
-            "remote_difference" => RemoteTracking::new(value_yaml, &self.backend, self.debug).display(),
-            _ => None,  // panic!("Unknown value type: {:?}", value_yaml)
+            "conflicts" => FileStatus::new(&simple_value, &self.backend, self.debug).display(),
+            "separator" => Separator::new(&simple_value, self.debug).display(),
+            "remote_difference" => RemoteTracking::new(value_yaml, &simple_value, &self.backend, self.debug).display(),
+            _ => panic!("Unknown value type: {:?}", value_yaml)
         };
         o
     }

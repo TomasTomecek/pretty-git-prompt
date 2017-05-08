@@ -40,7 +40,7 @@ def fetch():
     g(["fetch", "-a"])
 
 def reset_hard(ref):
-    g(["reset", "--hard", ref])
+    g(["reset", "--hard", ref, "--"])
 
 def checkout_ref(ref):
     g(["checkout", ref, "--"])
@@ -117,6 +117,21 @@ class RepoWithOrigin(SimpleRepo):
     def do(self):
         super().do()
         add_remote_origin(str(self.origin.realpath()))
+
+
+class RWOAndUpstream(RepoWithOrigin):
+    def do(self):
+        super().do()
+        add_remote_upstream(str(self.upstream.realpath()))
+        push("origin", "master", with_tracking=True)
+        create_file("file.txt", "text4")
+        add_file("file.txt")
+        commit()
+        push("upstream", "master", with_tracking=False)
+        reset_hard("HEAD^")
+        create_file("file.txt", "text5")
+        add_file("file.txt")
+        commit()
 
 
 class RWOWithoutTracking(RepoWithOrigin):
