@@ -10,21 +10,37 @@ use yaml_rust::{YamlLoader, Yaml};
 
 
 static DEFAULT_CONF: &'static str = "---
-# version of configuration file
+# default configuration for pretty-git-prompt
+# configuration parameters are descrbed on first occurence only
+#
+# version of configuration file (required), type string
 # right now it needs to be set to '1'
 version: '1'
 # configuration of various values (required), type dict
 # if you omit a value, it won't be displayed
 values:
+      # usually repository is in state 'clean' (which is not displayed)
+      # but it can also be in state like merge, rebase, cherry-pick -- this is displayed then
     - type: repository_state
+      # formatting (required), both (pre_format, post_format) are required
+      # you can include coloring in pre_format and reset colors in post_format
+      # you can also include arbitrary string
+      # for more information about setting colors for zsh:
+      # https://wiki.archlinux.org/index.php/zsh#Colors
+      # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Visual-effects
+      # and bash:
+      # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
+      #
+      # this is how the value is formatted in the end:
+      #   [pre_format][value][post_format]
       pre_format: ''
       post_format: ''
-    # this is used to separate values between each other
-    # if there is no value displayed before or after separator, separator is not displayed either
+      # this is used to separate values between each other
+      # if there is no value displayed before or after separator, separator is not displayed either
     - type: separator
       pre_format: '│'
       post_format: ''
-    # monitor status against different remotes - track history divergence
+      # monitor status against different remotes - track history divergence
     - type: remote_difference
       # remote branch name (optional), type string
       # example: 'upstream/master'
@@ -37,8 +53,8 @@ values:
       post_format: ''
       # values which can be displayed as part of 'remote_difference'
       values:
-        - type: name
           # formatting for remote name and branch name
+        - type: name
           # there are some special values which are substituted:
           #  * <REMOTE> will be replaced with name of a remote
           #  * <LOCAL_BRANCH> will be replaced with current branch name
@@ -65,41 +81,28 @@ values:
         - type: name
           pre_format: '<REMOTE>'
           post_format: ''
-          # the number of files present locally which are missing in remote repo
         - type: ahead
           pre_format: '↑'
           post_format: ''
-          # the number of commits present in remote repo which are missing locally
         - type: behind
           pre_format: '↓'
           post_format: ''
-    # the number of untracked files
     - type: separator
       pre_format: '│'
       post_format: ''
+      # the number of untracked files
     - type: new
-      # formatting (required), both (pre_format, post_format) are required
-      # you can include coloring in pre_format and reset colors in post_format
-      # you can also include arbitrary string
-      # for more information about setting colors for bash and zsh:
-      # https://wiki.archlinux.org/index.php/zsh#Colors
-      # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Visual-effects
-      # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
-      # this is how the value is formatted in the end:
-      #   [pre_format][value][post_format]
-      # example:
-      #   ✚2
       pre_format: '✚'
       post_format: ''
-    # the number of tracked files which were changed in working tree
+      # the number of tracked files which were changed in working tree
     - type: changed
       pre_format: 'Δ'
       post_format: ''
-    # the number of files added to index
+      # the number of files added to index
     - type: staged
       pre_format: '▶'
       post_format: ''
-    # during merge, rebase, or others, the numbers files which conflict
+      # during merge, rebase, or others, the numbers files which conflict
     - type: conflicts
       pre_format: '✖'
       post_format: ''
