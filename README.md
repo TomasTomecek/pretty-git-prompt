@@ -9,11 +9,8 @@ Your current git repository information inside a beautiful shell prompt.
 
 ## Development status
 
-The tool is ready for testing (I am using it for some time): most of the code
-is already written, now I seek for feedback.
-
-Since there was just a single release, it's very likely that configuration file
-structure will change in future.
+I would like to produce the first official 0.1.0 release, but there are still
+some issues I need to clear out. So use at your own risk.
 
 
 ## How can I try this?
