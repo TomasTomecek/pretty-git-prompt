@@ -4,7 +4,8 @@
 # stable container is meant to be used
 # unstable is meant for development & testing
 #
-# TODO: cache build container
+# TODO: cache build container: run it and exec statements inside
+#                              or figure out bind-mounted cargo cache
 
 .PHONY=default compile build stable-environment unstable-environment stable-build unstable-build exec-stable-build exec-unstable-build test exec-test
 RUST_STABLE_SPEC="1.15.1"
