@@ -40,7 +40,7 @@ exec-stable-build: target/release/pretty-git-prompt
 exec-unstable-build: target/debug/pretty-git-prompt
 
 target/release/pretty-git-prompt: $(DEPS)
-	cargo build --release
+	LIBZ_SYS_STATIC=1 cargo build --release
 target/debug/pretty-git-prompt: $(DEPS)
 	cargo build
 
