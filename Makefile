@@ -9,7 +9,8 @@
 
 .PHONY=default compile build stable-environment unstable-environment stable-build unstable-build exec-stable-build exec-unstable-build test exec-test
 RUST_STABLE_SPEC="1.15.1"
-RUST_UNSTABLE_SPEC="nightly-2017-03-30"
+# 05-21, last nightly used: -2017-03-30
+RUST_UNSTABLE_SPEC="nightly"
 DEPS=$(wildcard src/*.rs)
 CURRENT_USER="$(shell id -u)"
 STABLE_BUILD_IMAGE="${USER}/pretty-git-prompt"
