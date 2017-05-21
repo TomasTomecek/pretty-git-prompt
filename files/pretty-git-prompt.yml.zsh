@@ -25,6 +25,7 @@ values:
       # this is used to separate values between each other
       # if there is no value displayed before or after separator, separator is not displayed either
     - type: separator
+      display: surrounded
       pre_format: '│'
       post_format: ''
       # monitor status against different remotes - track history divergence
@@ -57,6 +58,7 @@ values:
           pre_format: '%{%F{white}%}↓'
           post_format: '%{%f%}'
     - type: separator
+      display: surrounded
       pre_format: '│'
       post_format: ''
     - type: remote_difference
@@ -75,6 +77,7 @@ values:
           pre_format: '%{%F{white}%}↓'
           post_format: '%{%f%}'
     - type: separator
+      display: surrounded
       pre_format: '│'
       post_format: ''
       # the number of untracked files

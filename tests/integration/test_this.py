@@ -59,3 +59,118 @@ def test_rwo_detached(tmpdir):
 def test_merge_conflict(tmpdir):
     with MergeConflict(tmpdir) as r:
         assert r.run() == "merge│master↑1│✖1"
+
+
+def test_global_separator(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: separator
+      display: always
+      pre_format: (
+      post_format: ''
+    - type: separator
+      display: always
+      pre_format: )
+      post_format: ''"""
+    print(config)
+    with SimpleRepo(tmpdir) as r:
+        assert r.run(custom_config_content=config) == "()"
+
+
+def test_global_with_value(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: separator
+      display: always
+      pre_format: (
+      post_format: ''
+    - type: remote_difference
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<LOCAL_BRANCH>'
+          post_format: ''
+        - type: ahead
+          pre_format: '↑'
+          post_format: ''
+        - type: behind
+          pre_format: '↓'
+          post_format: ''
+    - type: separator
+      display: always
+      pre_format: )
+      post_format: ''"""
+    print(config)
+    with SimpleRepo(tmpdir) as r:
+        assert r.run(custom_config_content=config) == "(master)"
+
+
+def test_surrounded_separator(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: separator
+      display: surrounded
+      pre_format: (
+      post_format: ''
+    - type: remote_difference
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<LOCAL_BRANCH>'
+          post_format: ''
+        - type: ahead
+          pre_format: '↑'
+          post_format: ''
+        - type: behind
+          pre_format: '↓'
+          post_format: ''
+    - type: separator
+      display: surrounded
+      pre_format: )
+      post_format: ''"""
+    print(config)
+    with SimpleRepo(tmpdir) as r:
+        assert r.run(custom_config_content=config) == "master"
+
+
+def test_surrounded_separator_blank(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: separator
+      display: surrounded
+      pre_format: (
+      post_format: ''
+    - type: remote_difference
+      remote_branch: 'upstream/master'
+      display_if_uptodate: false
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<LOCAL_BRANCH>'
+          post_format: ''
+        - type: ahead
+          pre_format: '↑'
+          post_format: ''
+        - type: behind
+          pre_format: '↓'
+          post_format: ''
+    - type: separator
+      display: surrounded
+      pre_format: )
+      post_format: ''"""
+    print(config)
+    with SimpleRepo(tmpdir) as r:
+        assert r.run(custom_config_content=config) == ""
