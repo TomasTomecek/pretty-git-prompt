@@ -217,10 +217,10 @@ All you need is [docker](https://github.com/docker/docker) engine running and `m
 First you need to build container image with rust and all dependencies inside:
 
 ```
-$ make unstable-environment
+$ make nightly-environment
 ```
 
-This is using latest usable nightly rust.
+This is using latest nightly rust. The nightly is used because of [clippy](https://github.com/Manishearth/rust-clippy).
 
 And then just make sure all tests are passing and you are not introducing any new warnings:
 
