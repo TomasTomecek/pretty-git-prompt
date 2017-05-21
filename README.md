@@ -79,7 +79,7 @@ information how to do that.
 
 #### GitHub release
 
-Get latest binary via GitHub release.
+Get the binary via [latest GitHub release](https://github.com/TomasTomecek/pretty-git-prompt/releases/latest).
 
 For a linux distrubution:
 
