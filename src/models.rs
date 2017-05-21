@@ -16,6 +16,7 @@ pub trait Display {
 }
 
 
+// used to substitute values like <REMOTE> or <BRANCH>
 fn substiute_special_values(s: String, values: &HashMap<String, String>) -> String {
     let mut r:String = s;
     for (k, v) in values {
@@ -29,6 +30,7 @@ pub fn format_value(pre_format: &str, post_format: &str, data: &str) -> String {
 }
 
 
+// this is the minimum amount of required attributes of a value
 #[derive(Debug, Clone)]
 pub struct SimpleValue {
     pub value_type: String,

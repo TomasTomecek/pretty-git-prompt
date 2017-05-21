@@ -1,3 +1,7 @@
+/* This module handles configuration. Ideally it should depend only on constants.
+ *
+ */
+
 use std::fs::{File,OpenOptions};
 use std::io;
 use std::io::{Write,Read};
@@ -122,6 +126,7 @@ struct Separator {
     display: String,
 }
 
+// FIXME: this should be defined in models
 impl Separator {
     fn new(value_yaml: &Yaml, simple_value: &SimpleValue) -> Separator {
         let separator_display_mode = match value_yaml["display"].as_str() {
@@ -167,6 +172,7 @@ impl Conf {
         if version.is_badvalue() || version.is_null() {
             panic!("'version' is missing in config file.");
         }
+        // there could be a better place to validate this
         match version.as_str() {
             Some(s) => {
                 if s != CURRENT_CONFIG_VERSION {
@@ -179,7 +185,10 @@ impl Conf {
         Conf { c: yaml.clone(), display_master: display_master }
     }
 
-    // TODO: create a function to return list of structs and pass that to display master
+    // FIXME: this is super-hacky and because of separators, since they need to know
+    //        if there is a value surrounding them; ideally this would return an array of
+    //        struct, which would hold common attributes and a reference to yaml, each value
+    //        would be then validated
     pub fn populate_values(&mut self) -> String {
         let ref values_yaml = self.c["values"];
         if values_yaml.is_badvalue() || values_yaml.is_null() {
@@ -192,6 +201,7 @@ impl Conf {
         // are we suppose to display a separator?
         let mut separator_pending: Option<String> = None;
 
+        // FIXME: all of this logic should live outside of this module
         for v in values {
             let simple_value = SimpleValue::new(&v);
             let value_type = simple_value.value_type.as_str();
@@ -240,6 +250,7 @@ pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, i
     }
 }
 
+// main function to obtain Conf struct
 pub fn get_configuration(supplied_conf_path: Option<String>, display_master: DisplayMaster) -> Conf {
     let content: String;
     if supplied_conf_path.is_some() {
@@ -268,6 +279,8 @@ pub fn get_configuration(supplied_conf_path: Option<String>, display_master: Dis
     Conf::new(docs[0].clone(), display_master)
 }
 
+// take default config and write it to path of default config location
+// error out if the config already exists
 pub fn create_default_config(path: PathBuf) -> Result<String, io::Error> {
     match OpenOptions::new()
                 .write(true)

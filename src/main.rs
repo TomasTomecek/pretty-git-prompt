@@ -1,3 +1,7 @@
+/* This module is suppose to be a glue between all other modules.
+ *
+ */
+
 extern crate clap;
 extern crate git2;
 extern crate yaml_rust;
