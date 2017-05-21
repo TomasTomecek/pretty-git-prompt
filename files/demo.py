@@ -55,13 +55,16 @@ def checkout_ref(z, ref):
 def checkout_b(z, branch_name):
     z.sendline("git checkout -b {}".format(branch_name))
 
-def create_file(filename, content):
-    with open(filename, "w") as fd:
-        fd.write(content + "\r\n")
+def append_file(z, filename, content):
+    z.sendline("echo '{}' >> {}".format(content, filename))
+    # with open(filename, "a") as fd:
+    #     fd.write(content + "\r\n")
 
-def append_file(filename, content):
-    with open(filename, "a") as fd:
-        fd.write(content + "\r\n")
+def create_file(z, filename, content):
+    z.sendline("touch {}".format(filename))
+    append_file(z, filename, content)
+    # with open(filename, "w") as fd:
+    #     fd.write(content + "\r\n")
 
 
 class G():
@@ -111,7 +114,7 @@ class BareRepo(G):
 class SimpleUntrackedFilesRepo(BareRepo):
     def run(self):
         super().run()
-        create_file("file.txt", "text")
+        create_file(self.z, "file.txt", "text")
 
 
 class SimpleChangedFilesRepo(SimpleUntrackedFilesRepo):
@@ -130,7 +133,7 @@ class SimpleRepo(SimpleChangedFilesRepo):
 class SimpleDirtyWithCommitRepo(SimpleRepo):
     def run(self):
         super().run()
-        create_file("file.txt", "text2")
+        create_file(self.z, "file.txt", "text2")
 
 
 class RepoWithOrigin(SimpleRepo):
@@ -145,7 +148,7 @@ class RWOWithoutTracking(RepoWithOrigin):
         super().run()
         with self.s:
             push(self.z, "origin", "master", with_tracking=False)
-        create_file("file.txt", "text3")
+        create_file(self.z, "file.txt", "text3")
         with self.s:
             add_file(self.z, "file.txt")
         with self.s:
@@ -167,7 +170,7 @@ class RWOLocalCommits(RepoWithOrigin):
 class RWORemoteCommits(RepoWithOrigin):
     def run(self):
         super().run()
-        create_file("file.txt", "text4")
+        create_file(self.z, "file.txt", "text4")
         with self.s:
             add_file(self.z, "file.txt")
         with self.s:
@@ -192,7 +195,7 @@ class MergeConflict(RWOLocalCommits):
         super().run()
         checkout_b(self.z, "branch")
         reset_hard(self.z, "HEAD^")
-        create_file("file.txt", "text5")
+        create_file(self.z, "file.txt", "text5")
         add_file(self.z, "file.txt")
         commit(self.z)
         checkout_ref(self.z, "master")
@@ -204,7 +207,7 @@ class Demo(RWORemoteCommits):
     def run(self):
         super().run()
         with self.s:
-            create_file("file.txt", "text5")
+            create_file(self.z, "file.txt", "text5")
         with self.s:
             add_file(self.z, "file.txt")
         with self.s:
@@ -214,7 +217,7 @@ class Demo(RWORemoteCommits):
         with self.s:
             push(self.z, "upstream", "master", with_tracking=False)
         with self.s:
-            append_file("file.txt", "text6")
+            append_file(self.z, "file.txt", "text6")
         with open("file.txt", "a") as f:
             f.write("text6")
         with self.s:
@@ -222,14 +225,14 @@ class Demo(RWORemoteCommits):
         with self.s:
             commit(self.z)
         with self.s:
-            append_file("file.txt", "text7")
+            append_file(self.z, "file.txt", "text7")
         with self.s:
             add_file(self.z, "file.txt")
         with self.s:
-            append_file("file.txt", "text8")
+            append_file(self.z, "file.txt", "text8")
         with self.s:
-            create_file("file2.txt", "text7")
-        self.z.sendline()
+            create_file(self.z, "file2.txt", "text7")
+        # self.z.sendline()
         self.z.interact()
 
 
