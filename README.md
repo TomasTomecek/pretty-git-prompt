@@ -50,7 +50,7 @@ $ make zsh-demo
 
 And this is what you should see:
 
-![]() TBD
+![Preview using zsh.](/data/zsh-screenshot.png)
 
 This is an interactive shell, so you can play with it.
 
@@ -63,7 +63,7 @@ In case you want to see the tool in bash shell:
 $ make bash-demo
 ```
 
-![]() TBD
+![Preview using bash.](/data/bash-screenshot.png)
 
 This demo is one of the ways I verify that the tool works correctly.
 
