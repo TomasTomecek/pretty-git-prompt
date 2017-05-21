@@ -20,7 +20,7 @@ pub trait Display {
 fn substiute_special_values(s: String, values: &HashMap<String, String>) -> String {
     let mut r:String = s;
     for (k, v) in values {
-        r = r.replace(k, &v);
+        r = r.replace(k, v);
     }
     r
 }
@@ -116,9 +116,13 @@ impl<'a> FileStatus<'a> {
         h.insert("staged".to_string(), STAGED_KEY);
         h.insert("conflicts".to_string(), CONFLICTS_KEY);
         if let Some(s) = self.backend.get_file_status() {
-            match h.get(file_type.clone()) {
-                Some(v) => return s.get(v.clone()).cloned(),
-                None => panic!("Invalid name for file status: {}", file_type)
+            let ft_string: String = file_type.to_string();
+            match h.get(&ft_string) {
+                Some(v) => {
+                    let v_string: String = v.to_string();
+                    return s.get(&v_string).cloned();
+                },
+                None => panic!("Invalid name for file status: {}", &ft_string)
             };
         }
         None
@@ -174,13 +178,11 @@ impl<'a> Display for RemoteTracking<'a> {
 
         let mut response: String = "".to_string();
         for value in self.values.clone() {
-            match self.display_value(value.clone(), a_b.clone(),
-                                     special_values.clone()) {
-                Some(s) => response += &s,
-                None => (),
+            if let Some(s) = self.display_value(value.clone(), a_b.clone(), special_values.clone()) {
+                response += &s
             }
         }
-        if response.len() > 0 {
+        if !response.is_empty() {
             Some(response)
         } else {
             None
@@ -195,7 +197,7 @@ impl<'a> RemoteTracking<'a> {
         let remote_branch: Option<RemoteBranch> = match value_yaml["remote_branch"].as_str() {
             Some(s) => {
                 let remote_branch_string = s.to_string();
-                let v: Vec<&str> = remote_branch_string.splitn(2, "/").collect();
+                let v: Vec<&str> = remote_branch_string.splitn(2, '/').collect();
                 if v.len() != 2 {
                     panic!("`remote_branch` must be in form of `<REMOTE>/<BRANCH>`");
                 }
@@ -281,14 +283,14 @@ impl DisplayMaster {
 
     pub fn display_value(&self, value_yaml: &Yaml, simple_value: &SimpleValue) -> Option<String> {
         let o: Option<String> = match simple_value.value_type.as_str() {
-            "repository_state" => RepoStatus::new(&simple_value, &self.backend, self.debug).display(),
+            "repository_state" => RepoStatus::new(simple_value, &self.backend, self.debug).display(),
             "new" |
             "changed" |
             "staged" |
-            "conflicts" => FileStatus::new(&simple_value, &self.backend, self.debug).display(),
+            "conflicts" => FileStatus::new(simple_value, &self.backend, self.debug).display(),
             // separator is displayed in conf, pretty hacky
             // "separator" => Separator::new(&simple_value, self.debug).display(),
-            "remote_difference" => RemoteTracking::new(value_yaml, &simple_value, &self.backend, self.debug).display(),
+            "remote_difference" => RemoteTracking::new(value_yaml, simple_value, &self.backend, self.debug).display(),
             _ => panic!("Unknown value type: {:?}", value_yaml)
         };
         o

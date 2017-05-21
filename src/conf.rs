@@ -190,7 +190,7 @@ impl Conf {
     //        struct, which would hold common attributes and a reference to yaml, each value
     //        would be then validated
     pub fn populate_values(&mut self) -> String {
-        let ref values_yaml = self.c["values"];
+        let values_yaml = &self.c["values"];
         if values_yaml.is_badvalue() || values_yaml.is_null() {
             panic!("No values to display.");
         }
@@ -203,35 +203,27 @@ impl Conf {
 
         // FIXME: all of this logic should live outside of this module
         for v in values {
-            let simple_value = SimpleValue::new(&v);
+            let simple_value = SimpleValue::new(v);
             let value_type = simple_value.value_type.as_str();
             if value_type == "separator" {
-                let separator = Separator::new(&v, &simple_value);
+                let separator = Separator::new(v, &simple_value);
                 let separator_display = separator.display();
                 if separator.is_display_always() {
                     out += &separator_display.unwrap();
                 } else {
                     separator_pending = separator_display;
                 }
-            } else {
-                match self.display_master.display_value(&v, &simple_value) {
-                    Some(s) => {
-                        // add separator if it is needed
-                        match separator_pending.clone() {
-                            Some(separator) => {
-                                if prev_was_set {
-                                    // println!("add separator {:?}", simple_value);
-                                    out += &separator;
-                                    separator_pending = None;
-                                }
-                            },
-                            None => (),
-                        }
-                        out += &s;
-                        prev_was_set = true;
-                    },
-                    None => ()
+            } else if let Some(s) = self.display_master.display_value(v, &simple_value) {
+                // add separator if it is needed
+                if let Some(separator) = separator_pending.clone() {
+                    if prev_was_set {
+                        // println!("add separator {:?}", simple_value);
+                        out += &separator;
+                        separator_pending = None;
+                    }
                 }
+                out += &s;
+                prev_was_set = true;
             }
         }
         out.clone()
@@ -252,17 +244,16 @@ pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, i
 
 // main function to obtain Conf struct
 pub fn get_configuration(supplied_conf_path: Option<String>, display_master: DisplayMaster) -> Conf {
-    let content: String;
-    if supplied_conf_path.is_some() {
-        content = match load_configuration_from_file(supplied_conf_path.unwrap()) {
+    let content: String = if supplied_conf_path.is_some() {
+        match load_configuration_from_file(supplied_conf_path.unwrap()) {
             Ok(c) => c,
             Err(e) => {
                 println!("ERROR");
                 panic!("Couldn't open configuration file: {:?}", e);
             }
-        };
+        }
     } else {
-        content = match load_configuration_from_file(get_default_config_path()) {
+        match load_configuration_from_file(get_default_config_path()) {
             Ok(c) => c,
             Err(e) => {
                 let kind = e.kind();
@@ -273,15 +264,15 @@ pub fn get_configuration(supplied_conf_path: Option<String>, display_master: Dis
                     panic!("Couldn't open configuration file: {:?}", kind);
                 }
             }
-        };
-    }
+        }
+    };
     let docs = YamlLoader::load_from_str(&content).unwrap();
     Conf::new(docs[0].clone(), display_master)
 }
 
 // take default config and write it to path of default config location
 // error out if the config already exists
-pub fn create_default_config(path: PathBuf) -> Result<String, io::Error> {
+pub fn create_default_config(path: &PathBuf) -> Result<String, io::Error> {
     match OpenOptions::new()
                 .write(true)
                 .create_new(true)
@@ -343,7 +334,7 @@ values: []";
             remove_file(p.clone());
         }
 
-        let result = create_default_config(p.clone());
+        let result = create_default_config(&p);
         assert!(result.is_ok());
 
         let mut file = File::open(p.clone()).unwrap();
@@ -363,7 +354,7 @@ values: []";
                     .open(p.clone());
         assert!(Path::new(&p).exists());
 
-        let result = create_default_config(p.clone());
+        let result = create_default_config(&p);
         assert!(result.is_err());
 
         remove_file(p.clone());
@@ -375,7 +366,7 @@ values: []";
             remove_file(p.clone());
         }
 
-        let result = create_default_config(p.clone());
+        let result = create_default_config(&p);
         assert!(result.is_ok());
 
         let repo = Repository::discover(".").unwrap();
