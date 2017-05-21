@@ -4,7 +4,7 @@ use std::io::{Write,Read};
 use std::path::{Path,PathBuf};
 
 use constants::{get_default_config_path, CURRENT_CONFIG_VERSION};
-use models::{DisplayMaster,SimpleValue};
+use models::{Display,DisplayMaster,SimpleValue,format_value};
 
 use yaml_rust::{YamlLoader, Yaml};
 
@@ -36,8 +36,12 @@ values:
       pre_format: ''
       post_format: ''
       # this is used to separate values between each other
-      # if there is no value displayed before or after separator, separator is not displayed either
     - type: separator
+      # condition when to display the separator (required), type string
+      # possible values:
+      #  * always -- display no matter what
+      #  * surrounded -- show only when there is a value displayed before of after separator
+      display: surrounded
       pre_format: '│'
       post_format: ''
       # monitor status against different remotes - track history divergence
@@ -70,6 +74,7 @@ values:
           pre_format: '↓'
           post_format: ''
     - type: separator
+      display: surrounded
       pre_format: '│'
       post_format: ''
     - type: remote_difference
@@ -88,6 +93,7 @@ values:
           pre_format: '↓'
           post_format: ''
     - type: separator
+      display: surrounded
       pre_format: '│'
       post_format: ''
       # the number of untracked files
@@ -107,6 +113,46 @@ values:
       pre_format: '✖'
       post_format: ''
 ";
+
+
+#[derive(Debug, Clone)]
+struct Separator {
+    // debug: bool,  TODO
+    value: SimpleValue,
+    display: String,
+}
+
+impl Separator {
+    fn new(value_yaml: &Yaml, simple_value: &SimpleValue) -> Separator {
+        let separator_display_mode = match value_yaml["display"].as_str() {
+            Some(s) => {
+                if !vec!("always", "surrounded").contains(&s) {
+                    panic!("'display' needs to be one of 'always' or 'surrounded'");
+                }
+                s
+            },
+            None => panic!("separator needs to have specified 'display' attribute"),
+        };
+        Separator{
+            value: simple_value.clone(), display: separator_display_mode.to_string()
+        }
+    }
+
+    fn is_display_always(&self) -> bool {
+        self.display == "always"
+    }
+
+    fn is_display_surrounded(&self) -> bool {
+        self.display == "surrounded"
+    }
+}
+
+impl Display for Separator {
+    fn display(&self) -> Option<String> {
+        // log!(self, "display separator, value: {:?}", self);
+        Some(format_value(&self.value.pre_format, &self.value.post_format, ""))
+    }
+}
 
 
 pub struct Conf {
@@ -148,11 +194,18 @@ impl Conf {
 
         for v in values {
             let simple_value = SimpleValue::new(&v);
-            match self.display_master.display_value(&v, &simple_value) {
-                Some(s) => {
-                    if simple_value.value_type.as_str() == "separator" {
-                        separator_pending = Some(s);
-                    } else {
+            let value_type = simple_value.value_type.as_str();
+            if value_type == "separator" {
+                let separator = Separator::new(&v, &simple_value);
+                let separator_display = separator.display();
+                if separator.is_display_always() {
+                    out += &separator_display.unwrap();
+                } else {
+                    separator_pending = separator_display;
+                }
+            } else {
+                match self.display_master.display_value(&v, &simple_value) {
+                    Some(s) => {
                         // add separator if it is needed
                         match separator_pending.clone() {
                             Some(separator) => {
@@ -166,9 +219,9 @@ impl Conf {
                         }
                         out += &s;
                         prev_was_set = true;
-                    }
-                },
-                None => ()
+                    },
+                    None => ()
+                }
             }
         }
         out.clone()

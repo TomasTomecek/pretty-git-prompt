@@ -24,7 +24,7 @@ fn substiute_special_values(s: String, values: &HashMap<String, String>) -> Stri
     r
 }
 
-fn format_value(pre_format: &str, post_format: &str, data: &str) -> String {
+pub fn format_value(pre_format: &str, post_format: &str, data: &str) -> String {
     format!("{}{}{}", pre_format, data, post_format)
 }
 
@@ -53,28 +53,6 @@ impl SimpleValue {
         SimpleValue{
             value_type: value_type, pre_format: pre_format, post_format: post_format,
         }
-    }
-}
-
-
-#[derive(Debug, Clone)]
-pub struct Separator {
-    debug: bool,
-    value: SimpleValue,
-}
-
-impl Separator {
-    fn new(simple_value: &SimpleValue, debug: bool) -> Separator {
-        Separator{
-            value: simple_value.clone(), debug: debug
-        }
-    }
-}
-
-impl Display for Separator {
-    fn display(&self) -> Option<String> {
-        log!(self, "display separator, value: {:?}", self);
-        Some(format_value(&self.value.pre_format, &self.value.post_format, ""))
     }
 }
 
@@ -306,7 +284,8 @@ impl DisplayMaster {
             "changed" |
             "staged" |
             "conflicts" => FileStatus::new(&simple_value, &self.backend, self.debug).display(),
-            "separator" => Separator::new(&simple_value, self.debug).display(),
+            // separator is displayed in conf, pretty hacky
+            // "separator" => Separator::new(&simple_value, self.debug).display(),
             "remote_difference" => RemoteTracking::new(value_yaml, &simple_value, &self.backend, self.debug).display(),
             _ => panic!("Unknown value type: {:?}", value_yaml)
         };

@@ -79,9 +79,19 @@ class G():
     def prepare(self):
         raise NotImplemented()
 
-    def run(self):
-        """ run program, return output """
-        return subprocess.check_output(["pretty-git-prompt"]).decode("utf-8").rstrip()
+    def run(self, custom_config_content=None):
+        """
+        custom_config_content: string
+
+        run program, return output
+        """
+        cmd = ["pretty-git-prompt"]
+        if custom_config_content:
+            tmpdir_path = os.path.join(str(self.tmpdir), "config")
+            with open(tmpdir_path, "w") as fd:
+                fd.write(custom_config_content)
+            cmd += ["--config", tmpdir_path]
+        return subprocess.check_output(cmd).decode("utf-8").rstrip()
 
 
 class BareRepo(G):
