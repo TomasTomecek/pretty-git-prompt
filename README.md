@@ -14,14 +14,14 @@ Features:
    * Count of changed, newly-added, staged, conflicting files.
  * You can track divergence against arbitrary branches.
  * Every value in output can be fully configured via a config file.
- * Sample configuration files feature colors
+ * Sample configuration files feature colors.
  * The tool supports `zsh` and `bash`.
- * The tool is written in Rust programming language and is delivered as a single statically-linked binary.
+ * pretty-git-prompt is written in Rust programming language and is delivered as a single, statically-linked binary.
 
 
 ## Development status
 
-The tool is ready for use.
+The tool is ready to use.
 
 
 ## How can I try this out?
