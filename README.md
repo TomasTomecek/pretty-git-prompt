@@ -6,17 +6,32 @@ Your current git repository information inside a beautiful shell prompt.
 
 ![Preview of pretty-git-prompt](/data/example.png)
 
+Features:
+
+ * You are able to display values such as:
+   * git repository state (resolving `merge` conflict, interactive `rebase`, ...)
+   * Current branch name.
+   * Count of changed, newly-added, staged, conflicting files.
+ * You can track divergence against arbitrary branches.
+ * Every value in output can be fully configured via a config file.
+ * Sample configuration files feature colors
+ * The tool supports `zsh` and `bash`.
+ * The tool is written in Rust programming language and is delivered as a single statically-linked binary.
+
 
 ## Development status
 
-I would like to produce the first official 0.1.0 release, but there are still
-some issues I need to clear out. So use at your own risk.
+The tool is ready for use.
 
 
-## How can I try this?
+## How can I try this out?
 
-Very easily, actually! It just takes some time to prepare it (create build
-environment, compile the tool, run the demo).
+Very easily! You don't need to install pretty-git-prompt if you just want to
+see it in action. There is a make target which launches docker container with
+whole environment set up.
+
+It just takes some time to prepare the environment (create build environment,
+compile the tool, run the demo).
 
 Just clone this git repository
 
@@ -42,18 +57,21 @@ This is an interactive shell, so you can play with it.
 
 ### bash
 
+In case you want to see the tool in bash shell:
+
 ```
 $ make bash-demo
 ```
 
 ![]() TBD
 
-This demo is one of the ways I test the tool.
+This demo is one of the ways I verify that the tool works correctly.
 
 
-## Usage
+## Installation
 
-If you want to add it inside your shell, this section contains information how to do that.
+If you want to add pretty-git-prompt inside your shell, this section contains
+information how to do that.
 
 
 ### Obtaining `pretty-git-prompt` binary
@@ -61,11 +79,20 @@ If you want to add it inside your shell, this section contains information how t
 
 #### GitHub release
 
-Get latest binary via GitHub release:
+Get latest binary via GitHub release.
+
+For a linux distrubution:
 
 ```
-$ curl -O TBD
+$ curl -O https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.1.3/pretty-git-prompt-0.1.0-x86_64-unknown-linux-gnu
 ```
+
+Or for MacOS:
+
+```
+$ curl -O https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.1.0/pretty-git-prompt-0.1.0-x86_64-apple-darwin
+```
+
 
 
 #### Compile it yourself
@@ -80,14 +107,14 @@ If you have rust compiler and cargo available on your system, you can compile
 the tool without using a container:
 
 ```
-$ cargo build --release
+$ make exec-stable-build
 ```
 
 The binary is then available on this path:
 
 ```
 $ ls -lha target/release/pretty-git-prompt
--rwxr-xr-x 2 user group 4.8M Apr  1 21:37 target/release/pretty-git-prompt
+-rwxr-xr-x 2 user group 1.7M May  9 21:37 target/release/pretty-git-prompt
 ```
 
 
@@ -145,10 +172,11 @@ This is not a git repository: Error { code: -3, klass: 6, message: "could not fi
 ## Configuration
 
 The configuration is documented inside default config file. Therefore it's not
-explicitely written down here. You can obtain it via:
+explicitly written down here. You can obtain it via:
 
 ```
 $ pretty-git-prompt create-default-config
+Configuration file created at "/home/you/.config/pretty-git-prompt.yml"
 ```
 
 This repository contains also configuration for bash and zsh with colors:
@@ -174,7 +202,7 @@ This project builds upon several principles:
  1. Configurable as much as possible.
  2. Pretty and useful.
  3. As few dependencies as possible.
- 4. Easy to contibute to:
+ 4. Easy to contribute to:
     * Build with a single command.
     * Build inside predictive environment.
     * Test with a single command.
@@ -207,4 +235,4 @@ If any of the two `make` invocations above doesn't work for you, please open an 
 
 This tool is heavily inspired by
 [zsh-git-prompt](https://github.com/olivierverdier/zsh-git-prompt). At some
-point I realized, I wanted a more powerful tool.
+point I realized, I wanted a more powerful tool so I wrote pretty-git-prompt.
