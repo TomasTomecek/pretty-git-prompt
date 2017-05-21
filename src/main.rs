@@ -1,3 +1,7 @@
+/* This module is suppose to be a glue between all other modules.
+ *
+ */
+
 extern crate clap;
 extern crate git2;
 extern crate yaml_rust;
@@ -44,7 +48,7 @@ fn main() {
 
     if matches.is_present(CLI_DEFAULT_CONFIG_SUBC_NAME) {
         let p = get_default_config_path();
-        match create_default_config(p.clone()) {
+        match create_default_config(&p) {
             Ok(path) => {
                 println!("Configuration file created at \"{}\"", path);
                 return ();
