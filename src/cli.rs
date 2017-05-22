@@ -7,7 +7,7 @@ pub fn cli<'a, 'b>() -> App<'a, 'b> {
     // FIXME: populate about with this
     // let ref def_conf_desc = format!("Create default config at \"{}\".", get_default_config_path().to_str().unwrap());
     App::new("pretty-zsh-prompt")
-        .version("0.0.1")
+        .version("0.1.0")
         .author("Tomas Tomecek <tomas@tomecek.net>")
         .about("Get `git status` inside your shell prompt.")
         .subcommand(SubCommand::with_name(CLI_DEFAULT_CONFIG_SUBC_NAME))
