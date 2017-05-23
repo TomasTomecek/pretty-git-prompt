@@ -84,13 +84,13 @@ Get the binary via [latest GitHub release](https://github.com/TomasTomecek/prett
 For a linux distrubution:
 
 ```
-$ curl -O https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.1.3/pretty-git-prompt-0.1.0-x86_64-unknown-linux-gnu
+$ curl -O https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.1.2/pretty-git-prompt-0.1.2-x86_64-unknown-linux-gnu
 ```
 
 Or for MacOS:
 
 ```
-$ curl -O https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.1.0/pretty-git-prompt-0.1.0-x86_64-apple-darwin
+$ curl -O https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.1.2/pretty-git-prompt-0.1.2-x86_64-apple-darwin
 ```
 
 
