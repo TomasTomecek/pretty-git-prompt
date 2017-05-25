@@ -2,6 +2,8 @@
  *
  */
 
+// importing crate_version! macro in cli.rs
+#[macro_use]
 extern crate clap;
 extern crate git2;
 extern crate yaml_rust;
