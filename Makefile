@@ -40,10 +40,14 @@ exec-stable-build: target/release/pretty-git-prompt
 
 exec-nightly-build: target/debug/pretty-git-prompt
 
+export GIT_REPO_IS_DIRTY := $(shell if git diff-index --quiet HEAD -- ; then echo "no"; else echo "yes"; fi)
+ifeq ($(origin TRAVIS_COMMIT), undefined)
+	export TRAVIS_COMMIT := $(shell git rev-parse --short HEAD)
+endif
 target/release/pretty-git-prompt: $(DEPS)
 	LIBZ_SYS_STATIC=1 cargo build --release
 target/debug/pretty-git-prompt: $(DEPS)
-	cargo build
+	cargo build -vvvv
 
 
 test:
