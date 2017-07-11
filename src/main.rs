@@ -2,33 +2,69 @@
  *
  */
 
-// importing crate_version! macro in cli.rs
-#[macro_use]
 extern crate clap;
 extern crate git2;
 extern crate yaml_rust;
 
 use std::io::{self, Write};
 use backend::Backend;
-use cli::cli;
 use conf::{Conf,get_configuration,create_default_config};
 use constants::*;
 use models::{DisplayMaster};
 
 use git2::Repository;
+use clap::{App,Arg,SubCommand};
 
 // util mod def needs to be first b/c of macro definitions and usage in other modules
 #[macro_use]
 mod util;
 mod backend;
-mod cli;
 mod conf;
 mod constants;
 mod models;
 
 
+fn get_version_str() -> String {
+    let version: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
+    let commit: Option<&'static str> = option_env!("TRAVIS_COMMIT");
+    let is_dirty: Option<&'static str> = option_env!("GIT_REPO_IS_DIRTY");
+    format!(
+        "{} ({}{})",
+        match version {
+            Some(v) => v,
+            None => "<version undefined>",
+        },
+        match commit {
+            Some(v) => v,
+            None => "<commit unknown>"
+        },
+        match is_dirty {
+            Some(_) => ", dirty",
+            None => ""
+        }
+    )
+}
+
 fn run_app() -> Result<(), String> {
-    let app = cli();
+    let version = get_version_str();
+    let version_ref: &str = version.as_str();
+    let def_conf_desc: &str = &format!("Create default config at \"{}\".", get_default_config_path().to_str().unwrap());
+    let app = App::new("pretty-git-prompt")
+        .version(version_ref)
+        .author("Tomas Tomecek <tomas@tomecek.net>")
+        .about("Get `git status` inside your shell prompt.")
+        .subcommand(SubCommand::with_name(CLI_DEFAULT_CONFIG_SUBC_NAME)
+                    .about(def_conf_desc))
+        .arg(Arg::with_name("config")
+             .short("c")
+             .long("config")
+             .value_name("FILE")
+             .help("Use the given config file.")
+             .takes_value(true))
+        .arg(Arg::with_name("debug")
+             .short("d")
+             .long("debug")
+             .help("Print debug messages, useful for identifying issues."));
     let matches = app.get_matches();
 
     let debug_enabled = matches.is_present("debug");
