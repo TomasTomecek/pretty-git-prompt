@@ -8,16 +8,12 @@
 #                              or figure out bind-mounted cargo cache
 
 .PHONY=default compile build stable-environment nightly-environment stable-build nightly-build exec-stable-build exec-nightly-build test exec-test
-RUST_STABLE_SPEC="1.15.1"
-# 05-21, last nightly used: -2017-03-30
-RUST_NIGHTLY_SPEC="nightly"
 DEPS=$(wildcard src/*.rs)
-CURRENT_USER="$(shell id -u)"
 STABLE_BUILD_IMAGE="${USER}/pretty-git-prompt"
 NIGHTLY_BUILD_IMAGE="${USER}/pretty-git-prompt:dev"
-STABLE_CONTAINER_RUN=docker run --rm -v ${PWD}:/app:Z -ti $(STABLE_BUILD_IMAGE)
+STABLE_CONTAINER_RUN=docker run --rm -v ${PWD}:/src:Z -ti $(STABLE_BUILD_IMAGE)
 # breaks CI: -v ~/.cargo/registry/:/home/pretty/.cargo/registry/:Z
-NIGHTLY_CONTAINER_RUN=docker run --rm -v ${PWD}:/app:Z -ti $(NIGHTLY_BUILD_IMAGE)
+NIGHTLY_CONTAINER_RUN=docker run --rm -v ${PWD}:/src:Z -ti $(NIGHTLY_BUILD_IMAGE)
 
 default: build
 
@@ -27,9 +23,9 @@ compile: nightly-build
 build: stable-build
 
 stable-environment:
-	docker build --build-arg USER_ID=$(CURRENT_USER) --build-arg RUST_SPEC=$(RUST_STABLE_SPEC) --build-arg WITH_TEST=no --tag $(STABLE_BUILD_IMAGE) .
+	docker build --tag $(STABLE_BUILD_IMAGE) .
 nightly-environment:
-	docker build --build-arg USER_ID=$(CURRENT_USER) --build-arg RUST_SPEC=$(RUST_NIGHTLY_SPEC) --build-arg WITH_TEST=yes --tag $(NIGHTLY_BUILD_IMAGE) .
+	docker build --tag $(NIGHTLY_BUILD_IMAGE) -f ./Dockerfile.dev .
 
 stable-build: stable-environment
 	$(STABLE_CONTAINER_RUN) make exec-stable-build
