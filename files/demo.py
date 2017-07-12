@@ -248,7 +248,7 @@ def demo():
 
     defult_config_path = os.path.expanduser("~/.config/pretty-git-prompt.yml")
     os.makedirs(os.path.dirname(defult_config_path), exist_ok=True)
-    shutil.copy2("/app/files/pretty-git-prompt.yml.{}".format(shell_name), defult_config_path)
+    shutil.copy2("/src/files/pretty-git-prompt.yml.{}".format(shell_name), defult_config_path)
 
     try:
         with Demo(l, shell_name) as g:
