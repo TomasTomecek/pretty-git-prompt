@@ -31,3 +31,6 @@ deploy:
     condition: $TRAVIS_RUST_VERSION = stable
     repo: TomasTomecek/pretty-git-prompt
     tags: true
+
+notifications:
+  email: false
