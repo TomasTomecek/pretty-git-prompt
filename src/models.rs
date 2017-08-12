@@ -10,12 +10,6 @@ use constants::*;
 use yaml_rust::{Yaml};
 
 
-// struct for specific values should implement this trait
-pub trait Display {
-    fn display(&self) -> Option<String>;
-}
-
-
 // used to substitute values like <REMOTE> or <BRANCH>
 fn substiute_special_values(s: String, values: &HashMap<String, String>) -> String {
     let mut r:String = s;
@@ -66,7 +60,13 @@ pub struct RepoStatus<'a> {
     value: SimpleValue,
 }
 
-impl<'a> Display for RepoStatus<'a> {
+impl<'a> RepoStatus<'a> {
+    fn new(simple_value: &SimpleValue, backend: &'a Backend, debug: bool) -> RepoStatus<'a> {
+        RepoStatus{
+            value: simple_value.clone(), backend: backend, debug: debug
+        }
+    }
+
     fn display(&self) -> Option<String> {
         log!(self, "display repository state, value: {:?}", self);
         let repo_state = self.backend.get_repository_state();
@@ -79,32 +79,12 @@ impl<'a> Display for RepoStatus<'a> {
     }
 }
 
-impl<'a> RepoStatus<'a> {
-    fn new(simple_value: &SimpleValue, backend: &'a Backend, debug: bool) -> RepoStatus<'a> {
-        RepoStatus{
-            value: simple_value.clone(), backend: backend, debug: debug
-        }
-    }
-}
-
 
 #[derive(Debug)]
 pub struct FileStatus<'a> {
     debug: bool,
     backend: &'a Backend,
     value: SimpleValue,
-}
-
-impl<'a> Display for FileStatus<'a> {
-    fn display(&self) -> Option<String> {
-        log!(self, "display file state, value: {:?}", self);
-        if let Some(x) = self.get_file_status_for_type(&self.value.value_type) {
-            return Some(format_value(&self.value.pre_format,
-                                     &self.value.post_format,
-                                     &format!("{}", x)));
-        }
-        None
-    }
 }
 
 impl<'a> FileStatus<'a> {
@@ -133,6 +113,16 @@ impl<'a> FileStatus<'a> {
             value: simple_value.clone(), backend: backend, debug: debug
         }
     }
+
+    fn display(&self) -> Option<String> {
+        log!(self, "display file state, value: {:?}", self);
+        if let Some(x) = self.get_file_status_for_type(&self.value.value_type) {
+            return Some(format_value(&self.value.pre_format,
+                                     &self.value.post_format,
+                                     &format!("{}", x)));
+        }
+        None
+    }
 }
 
 
@@ -145,49 +135,6 @@ pub struct RemoteTracking<'a> {
     value: SimpleValue,
     values: Vec<SimpleValue>,
 
-}
-
-impl<'a> Display for RemoteTracking<'a> {
-    fn display(&self) -> Option<String> {
-        log!(self, "display remote_difference: {:?}", self);
-
-        let a_b: BranchAheadBehind = match self.backend.get_branch_ahead_behind(
-            self.remote_branch.clone()) {
-            Some(x) => x,
-            None => {
-                panic!("no ahead behind stats found for = {:?}", self.remote_branch);
-            },
-        };
-        let local_branch_name: String = match a_b.local_branch_name.clone() {
-            Some(l) => l,
-            None => {
-                log!(self, "No local branch name.");
-                "".to_string()
-            }
-        };
-        let mut special_values: HashMap<String, String> = HashMap::new();
-        special_values.insert("<LOCAL_BRANCH>".to_string(), local_branch_name.clone());
-        match a_b.remote_branch_name.clone() {
-            Some(v) => special_values.insert("<REMOTE_BRANCH>".to_string(), v),
-            None => special_values.insert("<REMOTE_BRANCH>".to_string(), "".to_string()),
-        };
-        match a_b.remote_name.clone() {
-            Some(v) => special_values.insert("<REMOTE>".to_string(), v),
-            None => special_values.insert("<REMOTE>".to_string(), "".to_string()),
-        };
-
-        let mut response: String = "".to_string();
-        for value in self.values.clone() {
-            if let Some(s) = self.display_value(value.clone(), a_b.clone(), special_values.clone()) {
-                response += &s
-            }
-        }
-        if !response.is_empty() {
-            Some(response)
-        } else {
-            None
-        }
-    }
 }
 
 
@@ -264,6 +211,47 @@ impl<'a> RemoteTracking<'a> {
             "ahead" => self.display_ahead(&simple_value, a_b.ahead),
             "behind" => self.display_behind(&simple_value, a_b.behind),
             _ => panic!("Unknown value for remote_difference: {:?}", simple_value),
+        }
+    }
+
+    fn display(&self) -> Option<String> {
+        log!(self, "display remote_difference: {:?}", self);
+
+        let a_b: BranchAheadBehind = match self.backend.get_branch_ahead_behind(
+            self.remote_branch.clone()) {
+            Some(x) => x,
+            None => {
+                panic!("no ahead behind stats found for = {:?}", self.remote_branch);
+            },
+        };
+        let local_branch_name: String = match a_b.local_branch_name.clone() {
+            Some(l) => l,
+            None => {
+                log!(self, "No local branch name.");
+                "".to_string()
+            }
+        };
+        let mut special_values: HashMap<String, String> = HashMap::new();
+        special_values.insert("<LOCAL_BRANCH>".to_string(), local_branch_name.clone());
+        match a_b.remote_branch_name.clone() {
+            Some(v) => special_values.insert("<REMOTE_BRANCH>".to_string(), v),
+            None => special_values.insert("<REMOTE_BRANCH>".to_string(), "".to_string()),
+        };
+        match a_b.remote_name.clone() {
+            Some(v) => special_values.insert("<REMOTE>".to_string(), v),
+            None => special_values.insert("<REMOTE>".to_string(), "".to_string()),
+        };
+
+        let mut response: String = "".to_string();
+        for value in self.values.clone() {
+            if let Some(s) = self.display_value(value.clone(), a_b.clone(), special_values.clone()) {
+                response += &s
+            }
+        }
+        if !response.is_empty() {
+            Some(response)
+        } else {
+            None
         }
     }
 }

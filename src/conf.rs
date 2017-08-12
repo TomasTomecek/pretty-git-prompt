@@ -8,7 +8,7 @@ use std::io::{Write,Read};
 use std::path::{Path,PathBuf};
 
 use constants::{get_default_config_path, CURRENT_CONFIG_VERSION};
-use models::{Display,DisplayMaster,SimpleValue,format_value};
+use models::{DisplayMaster,SimpleValue,format_value};
 
 use yaml_rust::{YamlLoader, Yaml};
 
@@ -150,14 +150,13 @@ impl Separator {
     fn is_display_surrounded(&self) -> bool {
         self.display == "surrounded"
     }
-}
 
-impl Display for Separator {
     fn display(&self) -> Option<String> {
         // log!(self, "display separator, value: {:?}", self);
         Some(format_value(&self.value.pre_format, &self.value.post_format, ""))
     }
 }
+
 
 
 pub struct Conf {
