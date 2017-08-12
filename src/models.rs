@@ -291,7 +291,11 @@ impl DisplayMaster {
             // separator is displayed in conf, pretty hacky
             // "separator" => Separator::new(&simple_value, self.debug).display(),
             "remote_difference" => RemoteTracking::new(value_yaml, simple_value, &self.backend, self.debug).display(),
-            _ => panic!("Unknown value type: {:?}", value_yaml)
+            _ => {
+                // let's ignore these values
+                log!(self, "no rule to display value {}", simple_value.value_type.as_str());
+                None
+            }
         };
         o
     }
