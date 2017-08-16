@@ -116,6 +116,9 @@ values:
     - type: conflicts
       pre_format: '✖'
       post_format: ''
+    - type: stash
+      pre_format: '☐'
+      post_format: ''
 ";
 
 

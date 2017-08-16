@@ -96,3 +96,11 @@ values:
     - type: conflicts
       pre_format: '%{%F{yellow}%}✖'
       post_format: '%{%f%}'
+    - type: separator
+      display: surrounded
+      pre_format: '│'
+      post_format: ''
+      # show number of items in stash
+    - type: stash
+      pre_format: '%{%F{141}%}☐'
+      post_format: '%{%f%}'

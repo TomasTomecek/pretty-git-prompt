@@ -383,4 +383,16 @@ impl Backend {
         self.cache.set_file_statuses(Some(d.clone()));
         Some(d)
     }
+
+    pub fn get_stash_count(&self) -> u16 {
+        let mut count: RefCell<u16> = RefCell::new(0);
+        self.repo.borrow_mut().stash_foreach(
+            |u: usize, s: &str, o: &Oid| {
+                let mut c = count.borrow_mut();
+                *c += 1;
+                true
+            }
+        );
+        count.into_inner()
+    }
 }
