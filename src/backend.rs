@@ -1,6 +1,7 @@
 use std::fmt;
 use std::collections::HashMap;
 use std::cell::RefCell;
+use std::borrow::BorrowMut;
 
 use constants::{CHANGED_KEY,NEW_KEY,STAGED_KEY,CONFLICTS_KEY};
 
@@ -95,7 +96,7 @@ impl Cache {
         self.file_statuses.borrow().is_some()
     }
 
-    fn get_file_statuses(&self) -> Option<HashMap<String, u32>> {
+    fn get_file_statuses(&mut self) -> Option<HashMap<String, u32>> {
         self.file_statuses.borrow().clone()
     }
 }
@@ -345,7 +346,7 @@ impl Backend {
         }
     }
 
-    pub fn get_file_status(&self) -> Option<HashMap<String, u32>> {
+    pub fn get_file_status(&mut self) -> Option<HashMap<String, u32>> {
         if self.cache.is_file_statuses_set() {
             return self.cache.get_file_statuses();
         }
@@ -384,15 +385,14 @@ impl Backend {
         Some(d)
     }
 
-    pub fn get_stash_count(&self) -> u16 {
-        let mut count: RefCell<u16> = RefCell::new(0);
-        self.repo.borrow_mut().stash_foreach(
+    pub fn get_stash_count(&mut self) -> u16 {
+        let mut count: u16 = 0;
+        self.repo.stash_foreach(
             |u: usize, s: &str, o: &Oid| {
-                let mut c = count.borrow_mut();
-                *c += 1;
+                count += 1;
                 true
             }
         );
-        count.into_inner()
+        count
     }
 }
