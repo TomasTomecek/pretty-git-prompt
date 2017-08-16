@@ -96,3 +96,6 @@ values:
     - type: conflicts
       pre_format: '%{%F{yellow}%}✖'
       post_format: '%{%f%}'
+    - type: stash
+      pre_format: '%{%F{202}%}ⓢ'
+      post_format: '%{%f%}'

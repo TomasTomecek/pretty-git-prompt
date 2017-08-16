@@ -93,3 +93,6 @@ values:
     - type: conflicts
       pre_format: '\[\e[38;5;226m\]✖'
       post_format: '\[\e[0m\]'
+    - type: stash
+      pre_format: '\[\e[38;5;226m\]ⓢ'
+      post_format: '\[\e[0m\]'

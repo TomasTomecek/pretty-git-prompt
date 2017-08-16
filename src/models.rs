@@ -81,6 +81,33 @@ impl<'a> RepoStatus<'a> {
 
 
 #[derive(Debug)]
+pub struct StashStatus<'a> {
+    debug: bool,
+    backend: &'a Backend,
+    value: SimpleValue,
+}
+
+impl<'a> StashStatus<'a> {
+    fn new(simple_value: &SimpleValue, backend: &'a Backend, debug: bool) -> StashStatus<'a> {
+        StashStatus{
+            value: simple_value.clone(), backend: backend, debug: debug
+        }
+    }
+
+    fn display(&self) -> Option<String> {
+        log!(self, "display repository state, value: {:?}", self);
+        let count = self.backend.get_stash_count();
+        if count > 0 {
+            return Some(format_value(&self.value.pre_format,
+                                     &self.value.post_format,
+                                     &format!("{}", count)));
+        }
+        None
+    }
+}
+
+
+#[derive(Debug)]
 pub struct FileStatus<'a> {
     debug: bool,
     backend: &'a Backend,
@@ -278,6 +305,7 @@ impl DisplayMaster {
             "conflicts" => FileStatus::new(simple_value, &self.backend, self.debug).display(),
             // separator is displayed in conf, pretty hacky
             // "separator" => Separator::new(&simple_value, self.debug).display(),
+            "stash" => StashStatus::new(simple_value, &self.backend, self.debug).display(),
             "remote_difference" => RemoteTracking::new(value_yaml, simple_value, &self.backend, self.debug).display(),
             _ => {
                 // let's ignore these values
