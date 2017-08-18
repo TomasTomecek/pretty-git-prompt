@@ -12,6 +12,7 @@ Features:
    * git repository state (resolving `merge` conflict, interactive `rebase`, ...)
    * Current branch name.
    * Count of changed, newly-added, staged, conflicting files.
+   * Number of items in stash.
  * You can track divergence against arbitrary branches.
  * Every value in output can be fully configured via a config file.
  * Sample configuration files feature colors.
