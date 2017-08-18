@@ -81,15 +81,42 @@ impl<'a> RepoStatus<'a> {
 
 
 #[derive(Debug)]
+pub struct StashStatus<'a> {
+    debug: bool,
+    backend: &'a mut Backend,
+    value: SimpleValue,
+}
+
+impl<'a> StashStatus<'a> {
+    fn new(simple_value: &SimpleValue, backend: &'a mut Backend, debug: bool) -> StashStatus<'a> {
+        StashStatus{
+            value: simple_value.clone(), backend: backend, debug: debug
+        }
+    }
+
+    fn display(&mut self) -> Option<String> {
+        log!(self, "display repository state, value: {:?}", self);
+        let count = self.backend.get_stash_count();
+        if count > 0 {
+            return Some(format_value(&self.value.pre_format,
+                                     &self.value.post_format,
+                                     &format!("{}", count)));
+        }
+        None
+    }
+}
+
+
+#[derive(Debug)]
 pub struct FileStatus<'a> {
     debug: bool,
-    backend: &'a Backend,
+    backend: &'a mut Backend,
     value: SimpleValue,
 }
 
 impl<'a> FileStatus<'a> {
     // get # of files for specific type
-    fn get_file_status_for_type(&self, file_type: &str) -> Option<u32> {
+    fn get_file_status_for_type(&mut self, file_type: &str) -> Option<u32> {
         let mut h: HashMap<String, &str> = HashMap::new();
         h.insert("new".to_string(), NEW_KEY);
         h.insert("changed".to_string(), CHANGED_KEY);
@@ -108,15 +135,16 @@ impl<'a> FileStatus<'a> {
         None
     }
 
-    fn new(simple_value: &SimpleValue, backend: &'a Backend, debug: bool) -> FileStatus<'a> {
+    fn new(simple_value: &SimpleValue, backend: &'a mut Backend, debug: bool) -> FileStatus<'a> {
         FileStatus{
             value: simple_value.clone(), backend: backend, debug: debug
         }
     }
 
-    fn display(&self) -> Option<String> {
+    fn display(&mut self) -> Option<String> {
         log!(self, "display file state, value: {:?}", self);
-        if let Some(x) = self.get_file_status_for_type(&self.value.value_type) {
+        let vt = self.value.value_type.clone();
+        if let Some(x) = self.get_file_status_for_type(&vt) {
             return Some(format_value(&self.value.pre_format,
                                      &self.value.post_format,
                                      &format!("{}", x)));
@@ -269,15 +297,16 @@ impl DisplayMaster {
         DisplayMaster { backend: backend, debug: debug }
     }
 
-    pub fn display_value(&self, value_yaml: &Yaml, simple_value: &SimpleValue) -> Option<String> {
+    pub fn display_value(&mut self, value_yaml: &Yaml, simple_value: &SimpleValue) -> Option<String> {
         let o: Option<String> = match simple_value.value_type.as_str() {
             "repository_state" => RepoStatus::new(simple_value, &self.backend, self.debug).display(),
             "new" |
             "changed" |
             "staged" |
-            "conflicts" => FileStatus::new(simple_value, &self.backend, self.debug).display(),
+            "conflicts" => FileStatus::new(simple_value, &mut self.backend, self.debug).display(),
             // separator is displayed in conf, pretty hacky
             // "separator" => Separator::new(&simple_value, self.debug).display(),
+            "stash" => StashStatus::new(simple_value, &mut self.backend, self.debug).display(),
             "remote_difference" => RemoteTracking::new(value_yaml, simple_value, &self.backend, self.debug).display(),
             _ => {
                 // let's ignore these values
