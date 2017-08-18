@@ -20,6 +20,9 @@ def add_file(filename):
 def commit():
     g(["commit", "-m", "mesáž"])
 
+def stash():
+    g(["stash"])
+
 def add_remote(name, path):
     g(["remote", "add", name, path])
 
@@ -115,6 +118,13 @@ class SimpleRepo(SimpleChangedFilesRepo):
     def do(self):
         super().do()
         commit()
+
+
+class SimpleRepoWithStashedContent(SimpleRepo):
+    def do(self):
+        super().do()
+        create_file("file.txt", "stashed-content")
+        stash()
 
 
 class SimpleDirtyWithCommitRepo(SimpleRepo):

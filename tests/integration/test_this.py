@@ -61,6 +61,11 @@ def test_merge_conflict(tmpdir):
         assert r.run() == "merge│master↑1│✖1"
 
 
+def test_stashed(tmpdir):
+    with SimpleRepoWithStashedContent(tmpdir) as r:
+        assert r.run() == "master│☐1"
+
+
 def test_global_separator(tmpdir):
     config = """\
 ---
