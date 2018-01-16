@@ -95,7 +95,6 @@ $ curl -O https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.
 ```
 
 
-
 #### Compile it yourself
 
 ```
