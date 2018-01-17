@@ -1,4 +1,4 @@
-FROM tomastomecek/rust:1.18.0
+FROM tomastomecek/rust:1.23.0
 
 LABEL maintainer="Tomas Tomecek <tomas@tomecek.net>"
 
