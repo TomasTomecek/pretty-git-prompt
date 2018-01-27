@@ -2,6 +2,12 @@
 name = "pretty-git-prompt"
 version = "0.2.0"
 authors = ["Tomas Tomecek <tomas@tomecek.net>"]
+description = "Your current git repository information inside a beautiful shell prompt."
+license = "MIT"
+license-file = "LICENSE"
+documentation = "https://github.com/TomasTomecek/pretty-git-prompt/blob/master/README.md"
+homepage = "https://github.com/TomasTomecek/pretty-git-prompt"
+repository = "https://github.com/TomasTomecek/pretty-git-prompt"
 
 [[bin]]
 bench = false
