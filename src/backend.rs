@@ -352,8 +352,8 @@ impl Backend {
         }
         let mut d = HashMap::new();
 
-        let changed = STATUS_WT_MODIFIED | STATUS_WT_DELETED | STATUS_WT_TYPECHANGE | STATUS_WT_RENAMED;
-        let staged = STATUS_INDEX_MODIFIED | STATUS_INDEX_DELETED | STATUS_INDEX_TYPECHANGE | STATUS_INDEX_RENAMED | STATUS_INDEX_NEW;
+        let changed = Status::WT_MODIFIED | Status::WT_DELETED | Status::WT_TYPECHANGE | Status::WT_RENAMED;
+        let staged = Status::INDEX_MODIFIED | Status::INDEX_DELETED | Status::INDEX_TYPECHANGE | Status::INDEX_RENAMED | Status::INDEX_NEW;
 
         let statuses = match self.get_status() {
             Some(x) => x,
@@ -368,7 +368,7 @@ impl Backend {
                 let counter = d.entry(CHANGED_KEY.to_string()).or_insert(0);
                 *counter += 1;
             };
-            if file_status.contains(STATUS_WT_NEW) {
+            if file_status.contains(Status::WT_NEW) {
                 let counter = d.entry(NEW_KEY.to_string()).or_insert(0);
                 *counter += 1;
             };
@@ -376,7 +376,7 @@ impl Backend {
                 let counter = d.entry(STAGED_KEY.to_string()).or_insert(0);
                 *counter += 1;
             };
-            if file_status.intersects(STATUS_CONFLICTED) {
+            if file_status.intersects(Status::CONFLICTED) {
                 let counter = d.entry(CONFLICTS_KEY.to_string()).or_insert(0);
                 *counter += 1;
             };
