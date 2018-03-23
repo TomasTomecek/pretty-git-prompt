@@ -1,7 +1,6 @@
 use std::fmt;
 use std::collections::HashMap;
 use std::cell::RefCell;
-use std::borrow::BorrowMut;
 
 use constants::{CHANGED_KEY,NEW_KEY,STAGED_KEY,CONFLICTS_KEY};
 
@@ -387,12 +386,16 @@ impl Backend {
 
     pub fn get_stash_count(&mut self) -> u16 {
         let mut count: u16 = 0;
-        self.repo.stash_foreach(
-            |u: usize, s: &str, o: &Oid| {
+        let r = self.repo.stash_foreach(
+            |_u: usize, _s: &str, _o: &Oid| {
                 count += 1;
                 true
             }
         );
+        match r {
+            Ok(_) => log!(self, "Stash contains {} items", count),
+            Err(e) => log!(self, "There was an error while checking stash: {:?}", e),
+        };
         count
     }
 }
