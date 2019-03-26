@@ -1,0 +1,6 @@
+---
+specfile_path: rust-pretty-git-prompt.spec
+synced_files:
+  - rust-pretty-git-prompt.spec
+#  - .packit.yaml
+downstream_package_name: rust-pretty-git-prompt
