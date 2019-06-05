@@ -21,6 +21,6 @@ version = "2.19"
 default-features = false
 
 [dependencies.git2]
-version = "0.8"
+version = "0.9"
 default-features = false
 features = []
