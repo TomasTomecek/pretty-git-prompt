@@ -1,6 +1,6 @@
 [package]
 name = "pretty-git-prompt"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Tomas Tomecek <tomas@tomecek.net>"]
 description = "Your current git repository information inside a beautiful shell prompt."
 license-file = "LICENSE"

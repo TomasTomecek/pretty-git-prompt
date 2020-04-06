@@ -4,8 +4,8 @@
 %global crate pretty-git-prompt
 
 Name:           rust-%{crate}
-Version:        0.2.0
-Release:        7%{?dist}
+Version:        0.2.1
+Release:        1%{?dist}
 Summary:        Your current git repository information inside a beautiful shell prompt
 
 License:        MIT
@@ -52,6 +52,9 @@ Summary:        %{summary}
 %{_bindir}/pretty-git-prompt
 
 %changelog
+* Mon Apr 06 2020 Tomas Tomecek <ttomecek@redhat.com> - 0.2.1-1
+- new upstream release: 0.2.1
+
 * Sat Feb 02 2019 Fedora Release Engineering <releng@fedoraproject.org> - 0.2.0-7
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_30_Mass_Rebuild
 
