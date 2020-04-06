@@ -11,11 +11,6 @@ Summary:        Your current git repository information inside a beautiful shell
 License:        MIT
 URL:            https://crates.io/crates/pretty-git-prompt
 Source0:        https://crates.io/api/v1/crates/%{crate}/%{version}/download#/%{crate}-%{version}.crate
-# Initial patched metadata
-# * Bump git2 to 0.7, https://github.com/TomasTomecek/pretty-git-prompt/pull/39
-Patch0:         pretty-git-prompt-0.2.0-fix-metadata.diff
-# Make it work with new git2
-Patch1:         0001-deps-update-git2-to-0.7.patch
 
 ExclusiveArch:  %{rust_arches}
 
