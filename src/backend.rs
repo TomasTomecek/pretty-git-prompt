@@ -388,7 +388,7 @@ impl Backend {
     pub fn get_stash_count(&mut self) -> u16 {
         let mut count: u16 = 0;
         self.repo.stash_foreach(
-            |u: usize, s: &str, o: &Oid| {
+            |_u: usize, _s: &str, _o: &Oid| {
                 count += 1;
                 true
             }
