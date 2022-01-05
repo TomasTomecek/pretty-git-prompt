@@ -19,6 +19,7 @@ yaml-rust = "0.4.2"
 [dependencies.clap]
 version = "3.0"
 default-features = false
+features = ["std"]
 
 [dependencies.git2]
 version = "0.13"
