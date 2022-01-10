@@ -4,3 +4,9 @@ actions:
   create-archive:
   - cargo publish --dry-run --allow-dirty
   - bash -c "ls -1 target/package/*.crate"
+jobs:
+  - job: copr_build
+    trigger: pull_request
+    metadata:
+      targets:
+        - fedora-rawhide
