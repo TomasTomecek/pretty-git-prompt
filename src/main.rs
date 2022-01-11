@@ -13,7 +13,7 @@ use constants::*;
 use models::{DisplayMaster};
 
 use git2::Repository;
-use clap::{App,Arg,SubCommand};
+use clap::{App,Arg};
 
 // util mod def needs to be first b/c of macro definitions and usage in other modules
 #[macro_use]
@@ -53,16 +53,16 @@ fn run_app() -> Result<(), String> {
         .version(version_ref)
         .author("Tomas Tomecek <tomas@tomecek.net>")
         .about("Get `git status` inside your shell prompt.")
-        .subcommand(SubCommand::with_name(CLI_DEFAULT_CONFIG_SUBC_NAME)
+        .subcommand(App::new(CLI_DEFAULT_CONFIG_SUBC_NAME)
                     .about(def_conf_desc))
-        .arg(Arg::with_name("config")
-             .short("c")
+        .arg(Arg::new("config")
+             .short('c')
              .long("config")
              .value_name("FILE")
              .help("Use the given config file.")
              .takes_value(true))
-        .arg(Arg::with_name("debug")
-             .short("d")
+        .arg(Arg::new("debug")
+             .short('d')
              .long("debug")
              .help("Print debug messages, useful for identifying issues."));
     let matches = app.get_matches();
