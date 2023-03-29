@@ -17,7 +17,7 @@ name = "pretty-git-prompt"
 yaml-rust = "0.4.2"
 
 [dependencies.clap]
-version = "3.0"
+version = "4.2"
 default-features = false
 features = ["std"]
 
