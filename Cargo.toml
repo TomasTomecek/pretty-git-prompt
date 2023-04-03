@@ -22,6 +22,6 @@ default-features = false
 features = ["std"]
 
 [dependencies.git2]
-version = "0.13"
+version = "0.17"
 default-features = false
 features = []
