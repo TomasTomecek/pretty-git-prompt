@@ -16,8 +16,8 @@ ExclusiveArch:  %{rust_arches}
 
 BuildRequires:  rust-packaging
 # [dependencies]
-BuildRequires:  (crate(clap) >= 2.19.0 with crate(clap) < 3.0.0)
-BuildRequires:  (crate(git2) >= 0.7.0 with crate(git2) < 0.8.0)
+BuildRequires:  (crate(clap) >= 4.0.0 with crate(clap) < 5.0.0)
+BuildRequires:  (crate(git2) >= 0.14.0 with crate(git2) < 0.15.0)
 BuildRequires:  (crate(yaml-rust) >= 0.3.4 with crate(yaml-rust) < 0.4.0)
 
 %description

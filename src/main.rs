@@ -13,7 +13,7 @@ use constants::*;
 use models::{DisplayMaster};
 
 use git2::Repository;
-use clap::{App,Arg};
+use clap::{Arg, ArgAction, Command};
 
 // util mod def needs to be first b/c of macro definitions and usage in other modules
 #[macro_use]
@@ -23,97 +23,67 @@ mod conf;
 mod constants;
 mod models;
 
-
-fn get_version_str() -> String {
-    let version: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
-    let commit: Option<&'static str> = option_env!("TRAVIS_COMMIT");
-    let is_dirty: Option<&'static str> = option_env!("GIT_REPO_IS_DIRTY");
-    format!(
-        "{} ({}{})",
-        match version {
-            Some(v) => v,
-            None => "<version undefined>",
-        },
-        match commit {
-            Some(v) => v,
-            None => "<commit unknown>"
-        },
-        match is_dirty {
-            Some(_) => ", dirty",
-            None => ""
-        }
-    )
-}
-
-fn run_app() -> Result<(), String> {
-    let version = get_version_str();
-    let version_ref: &str = version.as_str();
-    let def_conf_desc: &str = &format!("Create default config at \"{}\".", get_default_config_path().to_str().unwrap());
-    let app = App::new("pretty-git-prompt")
-        .version(version_ref)
+fn main() {
+    let def_conf_desc: String = format!("Create default config at \"{}\".", get_default_config_path().to_str().unwrap());
+    let matches = Command::new("pretty-git-prompt")
+        .version(option_env!("CARGO_PKG_VERSION"))
         .author("Tomas Tomecek <tomas@tomecek.net>")
         .about("Get `git status` inside your shell prompt.")
-        .subcommand(App::new(CLI_DEFAULT_CONFIG_SUBC_NAME)
-                    .about(def_conf_desc))
+        .subcommand(Command::new("create-default-config")
+            .about(def_conf_desc))
         .arg(Arg::new("config")
-             .short('c')
-             .long("config")
-             .value_name("FILE")
-             .help("Use the given config file.")
-             .takes_value(true))
+            .short('c')
+            .long("config")
+            .value_name("FILE")
+            .help("Use the given config file."))
         .arg(Arg::new("debug")
-             .short('d')
-             .long("debug")
-             .help("Print debug messages, useful for identifying issues."));
-    let matches = app.get_matches();
+            .short('d')
+            .long("debug")
+            .help("Print debug messages, useful for identifying issues.")
+            .action(ArgAction::SetTrue)
+        ).get_matches();
 
-    let debug_enabled = matches.is_present("debug");
+    let debug_enabled = matches.get_flag("debug");
     if debug_enabled { println!("Debug messages are enabled."); }
 
-    let conf_path: Option<String> = if matches.is_present("config") {
-        Some(String::from(matches.value_of("config").unwrap()))
-    } else {
-        None
-    };
+    match matches.subcommand() {
+        Some(("create-default-config", _sub_matches)) => {
+            let p = get_default_config_path();
+            match create_default_config(&p) {
+                Ok(path) => {
+                    println!("Configuration file created at \"{}\"", path);
+                    ::std::process::exit(0);
+                }
+                Err(e) => {
+                    if let Err(e2) = writeln!(
+                        io::stderr(),
+                        "Failed to create configuration file \"{}\": {}",
+                        p.to_str().unwrap(),
+                        e
+                    ) {
+                        println!("Writing error: {}", e2.to_string());
+                    }
+                    ::std::process::exit(2);
+                }
+            };
+        },
+        _ => {
+            // no command, run primary functionality
+            let repo = match Repository::discover(".") {
+                Ok(repo) => repo,
+                // not a git repository, ignore
+                Err(e) => {
+                    if debug_enabled { println!("This is not a git repository: {:?}", e); }
+                    ::std::process::exit(0);
+                }
+            };
 
-    // create default config command
-    if matches.is_present(CLI_DEFAULT_CONFIG_SUBC_NAME) {
-        let p = get_default_config_path();
-        match create_default_config(&p) {
-            Ok(path) => {
-                println!("Configuration file created at \"{}\"", path);
-                return Ok(());
-            }
-            Err(e) => {
-                return Err(format!("Failed to create configuration file \"{}\": {}", p.to_str().unwrap(), e));
-            }
-        };
-    } else {
-        // no command, run primary functionality
-        let repo = match Repository::discover(".") {
-            Ok(repo) => repo,
-            // not a git repository, ignore
-            Err(e) => {
-                if debug_enabled { println!("This is not a git repository: {:?}", e); }
-                return Ok(());
-            }
-        };
-
-        let backend = Backend::new(repo, debug_enabled);
-        let dm: DisplayMaster = DisplayMaster::new(backend, debug_enabled);
-        let mut conf: Conf = get_configuration(conf_path, dm);
-        let out: String = conf.populate_values();
-        println!("{}", out);
-    }
-    Ok(())
-}
-
-fn main() {
-    ::std::process::exit(match run_app() {
-        Ok(_) => 0,
-        Err(err) => {
-            writeln!(io::stderr(), "{}", err).unwrap();
-            2
+            let backend = Backend::new(repo, debug_enabled);
+            let dm: DisplayMaster = DisplayMaster::new(backend, debug_enabled);
+            let conf_path = matches.get_one::<String>("config");
+            let mut conf: Conf = get_configuration(conf_path.cloned(), dm);
+            let out: String = conf.populate_values();
+            println!("{}", out);
         }
-    });
+    }
 }
