@@ -1,5 +1,8 @@
 ---
 downstream_package_name: rust-pretty-git-prompt
+srpm_build_deps:
+- cargo
+- rust
 actions:
   create-archive:
   - cargo publish --dry-run --allow-dirty
