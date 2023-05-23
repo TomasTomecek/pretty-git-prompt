@@ -3,7 +3,7 @@ name = "pretty-git-prompt"
 version = "0.2.1"
 authors = ["Tomas Tomecek <tomas@tomecek.net>"]
 description = "Your current git repository information inside a beautiful shell prompt."
-license-file = "LICENSE"
+license = "MIT"
 documentation = "https://github.com/TomasTomecek/pretty-git-prompt/blob/master/README.md"
 homepage = "https://github.com/TomasTomecek/pretty-git-prompt"
 repository = "https://github.com/TomasTomecek/pretty-git-prompt"
@@ -14,14 +14,14 @@ path = "src/main.rs"
 name = "pretty-git-prompt"
 
 [dependencies]
-yaml-rust = "0.4.2"
+yaml-rust = "0.4.5"
 
 [dependencies.clap]
-version = "3.0"
+version = "4.*"
 default-features = false
-features = ["std"]
+features = ["std", "cargo"]
 
 [dependencies.git2]
-version = "0.13"
+version = "0.14.*"
 default-features = false
 features = []

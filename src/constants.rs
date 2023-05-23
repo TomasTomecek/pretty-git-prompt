@@ -12,8 +12,6 @@ pub static CURRENT_CONFIG_VERSION: &'static str = "1";
 
 pub static DEFAULT_CONFIG_NAME: &'static str = "pretty-git-prompt.yml";
 
-pub static CLI_DEFAULT_CONFIG_SUBC_NAME: &'static str = "create-default-config";
-
 pub fn get_default_config_path() -> PathBuf {
     let mut p = match env::var("XDG_CONFIG_HOME") {
         Ok(val) => PathBuf::from(&val),

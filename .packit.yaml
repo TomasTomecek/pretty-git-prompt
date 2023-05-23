@@ -1,6 +1,14 @@
 ---
 downstream_package_name: rust-pretty-git-prompt
+srpm_build_deps:
+- cargo
+- rust
 actions:
   create-archive:
   - cargo publish --dry-run --allow-dirty
   - bash -c "ls -1 target/package/*.crate"
+jobs:
+  - job: copr_build
+    trigger: pull_request
+    targets:
+      - fedora-all
