@@ -8,3 +8,9 @@ Cargo.lock
 
 .cmake/
 .cargo/
+
+pretty-git-prompt-*.crate
+
+# RPM building
+SRPMS/
+x86_64/
