@@ -4,7 +4,7 @@
 %global crate pretty-git-prompt
 
 Name:           rust-%{crate}
-Version:        0.2.1
+Version:        0.2.2
 Release:        %autorelease
 Summary:        Your current git repository information inside a beautiful shell prompt
 
