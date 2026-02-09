@@ -297,15 +297,6 @@ pub fn create_default_config(path: &PathBuf) -> Result<String, io::Error> {
 
 mod tests {
     // We'll use this git repo for testing
-    use std::fs::{File,OpenOptions,remove_file};
-    use std::io::{Write,Read};
-    use std::path::{Path,PathBuf};
-    use conf::{get_configuration,create_default_config,DEFAULT_CONF,Conf};
-    use yaml_rust::{YamlLoader};
-    use backend::Backend;
-    use models::DisplayMaster;
-    use git2::Repository;
-
     #[test]
     #[should_panic(expected = "'version' is missing in config file.")]
     fn test_empty_config() {

@@ -106,7 +106,7 @@ impl Backend {
         Backend{ repo: repo, debug: debug, cache: Cache::new() }
     }
 
-    fn get_head(&self) -> Option<Reference> {
+    fn get_head(&self) -> Option<Reference<'_>> {
         match self.repo.head() {
             Ok(head) => Some(head),
             Err(e2) => {
@@ -317,7 +317,7 @@ impl Backend {
         }
     }
 
-    pub fn get_status(&self) -> Option<Statuses> {
+    pub fn get_status(&self) -> Option<Statuses<'_>> {
         let mut so = StatusOptions::new();
         let mut opts = so.show(StatusShow::IndexAndWorkdir);
         opts.include_untracked(true);
