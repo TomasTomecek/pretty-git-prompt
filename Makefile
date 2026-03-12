@@ -9,32 +9,25 @@
 
 .PHONY=default compile build stable-environment nightly-environment stable-build nightly-build exec-stable-build exec-nightly-build test exec-test
 DEPS=$(wildcard src/*.rs)
-STABLE_BUILD_IMAGE="${USER}/pretty-git-prompt"
-NIGHTLY_BUILD_IMAGE="${USER}/pretty-git-prompt:dev"
-STABLE_CONTAINER_RUN=docker run --rm -v ${PWD}:/src:Z -ti $(STABLE_BUILD_IMAGE)
-# breaks CI: -v ~/.cargo/registry/:/home/pretty/.cargo/registry/:Z
-NIGHTLY_CONTAINER_RUN=docker run --rm -v ${PWD}:/src:Z -ti $(NIGHTLY_BUILD_IMAGE)
+BUILD_IMAGE="docker.io/tomastomecek/pretty-git-prompt"
+CONTAINER_RUN=podman run --rm -v ${PWD}:/src:Z -w /src -ti $(BUILD_IMAGE)
 
 default: build
 
 
-compile: nightly-build
+build: release-build
 
-build: stable-build
+build-environment:
+	podman build --tag $(BUILD_IMAGE) .
 
-stable-environment:
-	docker build --tag $(STABLE_BUILD_IMAGE) .
-nightly-environment:
-	docker build --tag $(NIGHTLY_BUILD_IMAGE) -f ./Dockerfile.dev .
+release-build: build-environment
+	$(CONTAINER_RUN) make exec-release-build
+debug-build: build-environment
+	$(CONTAINER_RUN) make exec-debug-build
 
-stable-build: stable-environment
-	$(STABLE_CONTAINER_RUN) make exec-stable-build
-nightly-build:
-	$(NIGHTLY_CONTAINER_RUN) make exec-nightly-build
+exec-release-build: target/release/pretty-git-prompt
 
-exec-stable-build: target/release/pretty-git-prompt
-
-exec-nightly-build: target/debug/pretty-git-prompt
+exec-debug-build: target/debug/pretty-git-prompt
 
 target/release/pretty-git-prompt: $(DEPS)
 	LIBZ_SYS_STATIC=1 cargo build --release
@@ -43,7 +36,7 @@ target/debug/pretty-git-prompt: $(DEPS)
 
 
 test:
-	$(NIGHTLY_CONTAINER_RUN) make exec-test
+	$(CONTAINER_RUN) make exec-test
 
 exec-test: target/debug/pretty-git-prompt
 	py.test-3 -vv tests
@@ -53,17 +46,13 @@ exec-test: target/debug/pretty-git-prompt
 # compile and inject into container
 # open prompt with prepared git repo
 zsh-demo:
-	$(NIGHTLY_CONTAINER_RUN) files/demo.py zsh
+	$(CONTAINER_RUN) files/demo.py zsh
 bash-demo:
-	$(NIGHTLY_CONTAINER_RUN) files/demo.py bash
+	$(CONTAINER_RUN) files/demo.py bash
 
 
 shell:
-	$(NIGHTLY_CONTAINER_RUN) zsh -l
-
-show-work:
-	egrep --color=yes -C 3 "(TODO|FIXME)" $(DEPS) Makefile Dockerfile
-
+	$(CONTAINER_RUN) zsh -l
 
 release:
 	cargo build --target ${TARGET} --release
