@@ -58,6 +58,14 @@ values:
       display: surrounded
       pre_format: '│'
       post_format: ''
+      # name of a tag which points exactly at the checked out commit
+    - type: tag
+      pre_format: '\[\e[38;5;3m\]#'
+      post_format: '\[\e[0m\]'
+    - type: separator
+      display: surrounded
+      pre_format: '│'
+      post_format: ''
     - type: remote_difference
       remote_branch: 'upstream/master'
       display_if_uptodate: false

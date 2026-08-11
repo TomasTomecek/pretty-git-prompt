@@ -208,6 +208,31 @@ impl Backend {
         current_branch_name
     }
 
+    // name of a tag which points exactly at HEAD (`git describe --tags --exact-match`)
+    pub fn get_tag_name(&self) -> Option<String> {
+        let mut opts = DescribeOptions::new();
+        opts.describe_tags();
+        // only tags which point directly at HEAD
+        opts.max_candidates_tags(0);
+        let description = match self.repo.describe(&opts) {
+            Ok(d) => d,
+            Err(e) => {
+                log!(self, "No tag found for HEAD: {:?}", e);
+                return None;
+            }
+        };
+        match description.format(None) {
+            Ok(name) => {
+                log!(self, "Tag for HEAD is {}", name);
+                Some(name)
+            },
+            Err(e) => {
+                log!(self, "Can't format tag name: {:?}", e);
+                None
+            }
+        }
+    }
+
     fn get_branch_remote(&self, reference: Reference) -> Option<RefPair> {
         let b = Branch::wrap(reference);
         let upstream = match b.upstream() {

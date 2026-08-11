@@ -61,6 +61,14 @@ values:
       display: surrounded
       pre_format: '│'
       post_format: ''
+      # name of a tag which points exactly at the checked out commit
+    - type: tag
+      pre_format: '%{%F{yellow}%}#'
+      post_format: '%{%f%}'
+    - type: separator
+      display: surrounded
+      pre_format: '│'
+      post_format: ''
     - type: remote_difference
       remote_branch: 'upstream/master'
       display_if_uptodate: false
