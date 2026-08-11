@@ -395,7 +395,7 @@ impl Backend {
         match r {
             Ok(_) => log!(self, "Stash contains {} items", count),
             Err(e) => log!(self, "There was an error while checking stash: {:?}", e),
-        };
+        }
         count
     }
 }
