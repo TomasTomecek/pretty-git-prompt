@@ -296,6 +296,7 @@ pub fn create_default_config(path: &PathBuf) -> Result<String, io::Error> {
 }
 
 
+#[cfg(test)]
 mod tests {
     // We'll use this git repo for testing
     use std::env;

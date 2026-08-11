@@ -4,7 +4,7 @@
 
 extern crate clap;
 extern crate git2;
-// for tests
+#[cfg(test)]
 extern crate tempfile;
 extern crate yaml_rust;
 
