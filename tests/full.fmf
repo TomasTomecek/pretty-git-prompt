@@ -1,7 +1,11 @@
 summary:
   Full test suite of pretty-git-prompt
 
+# tests are executed from the root of the repository, not from tests/
+path: /
+
 require:
+  - pretty-git-prompt
   - cargo
   - clippy
   - cmake
@@ -33,8 +37,8 @@ duration: 15m
   description: |
     Run pytest integration tests that verify pretty-git-prompt behavior
     with real git repositories and various git states.
-  test: |
-    cargo build --verbose
-    pytest-3 -vv tests/integration
+    The tests invoke the `pretty-git-prompt` binary from $PATH, which is
+    the installed package (in Testing Farm, the copr build of this PR).
+  test: pytest-3 -vv tests/integration
   duration: 10m
   order: 2
