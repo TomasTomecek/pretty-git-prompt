@@ -8,7 +8,8 @@ LABEL maintainer="Tomas Tomecek <tomas@tomecek.net>"
 # zlib-devel         -- git crate uses zlib library
 # git python3-pytest -- integration tests
 # python3-pexpect    -- demo
-RUN dnf install -y make zsh cmake zlib-devel git python3-pytest python3-pexpect cargo clippy
+RUN dnf install -y make zsh cmake zlib-devel git python3-pytest python3-pexpect cargo clippy && \
+    dnf clean all
 
 ARG RUST_BACKTRACE="1"
 ENV PYTHONDONTWRITEBYTECODE=YES
