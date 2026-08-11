@@ -300,11 +300,12 @@ pub fn create_default_config(path: &PathBuf) -> Result<String, io::Error> {
 mod tests {
     // We'll use this git repo for testing
     use std::env;
-    use std::fs::{File,OpenOptions,remove_file};
+    use std::fs::{File,OpenOptions};
     use std::io::{Read};
-    use std::path::{Path,PathBuf};
+    use std::path::{Path};
     use std::process::{Command,Stdio};
     use conf::{get_configuration,create_default_config,DEFAULT_CONF,Conf};
+    use constants::{get_default_config_path,ENV_LOCK};
     use yaml_rust::{YamlLoader};
     use backend::Backend;
     use models::DisplayMaster;
@@ -318,7 +319,7 @@ mod tests {
 
             // we could use git2 to create a repo with a commit, but it's soooo complicated
             let status = Command::new("git")
-                .args(&["-C", _dir_path.to_str().unwrap(), "init", "."])
+                .args(&["-C", _dir_path.to_str().unwrap(), "init", "-b", "master", "."])
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .status()
@@ -377,10 +378,8 @@ values: []";
 
     #[test]
     fn test_create_default_config() {
-        let p = PathBuf::from("/tmp/test_pretty_git_prompt_config1");
-        if Path::new(&p).exists() {
-            remove_file(p.clone()).unwrap();
-        }
+        let conf_dir = TempDir::new().unwrap();
+        let p = conf_dir.path().join("config.yml");
 
         let result = create_default_config(&p);
         assert!(result.is_ok());
@@ -389,12 +388,11 @@ values: []";
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
         assert_eq!(contents, DEFAULT_CONF);
-
-        remove_file(p.clone()).unwrap();
     }
     #[test]
     fn test_create_default_config_when_exists() {
-        let p = PathBuf::from("/tmp/test_pretty_git_prompt_config2");
+        let conf_dir = TempDir::new().unwrap();
+        let p = conf_dir.path().join("config.yml");
         OpenOptions::new()
                     .write(true)
                     .create(true)
@@ -404,17 +402,14 @@ values: []";
 
         let result = create_default_config(&p);
         assert!(result.is_err());
-
-        remove_file(p.clone()).unwrap();
     }
     #[test]
     fn test_load_default_config() {
-        let p = PathBuf::from("/tmp/test_pretty_git_prompt_config3");
-        if Path::new(&p).exists() {
-            remove_file(p.clone()).unwrap();
-        }
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let conf_dir = TempDir::new().unwrap();
+        env::set_var("XDG_CONFIG_HOME", conf_dir.path());
 
-        let result = create_default_config(&p);
+        let result = create_default_config(&get_default_config_path());
         assert!(result.is_ok());
 
         init_git!(dir);
@@ -422,9 +417,10 @@ values: []";
         let repo = Repository::discover(dir.path()).unwrap();
         let backend = Backend::new(repo, true);
         let dm: DisplayMaster = DisplayMaster::new(backend, true);
-        get_configuration(None, dm);
-
-        remove_file(p.clone()).unwrap();
+        let mut c = get_configuration(None, dm);
+        // the freshly created default config renders just the branch name
+        // in a repository with a single commit and no remote
+        assert_eq!(c.populate_values(), "master");
     }
 
     #[test]
