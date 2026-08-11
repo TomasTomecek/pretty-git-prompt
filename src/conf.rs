@@ -150,10 +150,8 @@ impl Separator {
         self.display == "always"
     }
 
+    // 'surrounded' is accepted in the config but behaves like 'always' for now
     // FIXME: https://github.com/TomasTomecek/pretty-git-prompt/issues/33
-    // fn is_display_surrounded(&self) -> bool {
-    //     self.display == "surrounded"
-    // }
 
     fn display(&self) -> Option<String> {
         // log!(self, "display separator, value: {:?}", self);
