@@ -386,14 +386,15 @@ impl Backend {
 
     pub fn get_stash_count(&mut self) -> u16 {
         let mut count: u16 = 0;
-        let result = self.repo.stash_foreach(
+        let r = self.repo.stash_foreach(
             |_u: usize, _s: &str, _o: &Oid| {
                 count += 1;
                 true
             }
         );
-        if result.is_err() {
-            log!(self, "Unable to get stash count from the repository: {:?}", result);
+        match r {
+            Ok(_) => log!(self, "Stash contains {} items", count),
+            Err(e) => log!(self, "There was an error while checking stash: {:?}", e),
         }
         count
     }

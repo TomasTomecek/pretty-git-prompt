@@ -1,0 +1,11 @@
+summary: Main test plan for pretty-git-prompt
+description: |
+    Execute unit and integration tests for pretty-git-prompt.
+    This includes Rust unit tests via cargo and Python integration tests via pytest.
+
+discover:
+    how: fmf
+    filter: "tag:full"
+
+execute:
+    how: tmt

@@ -150,9 +150,8 @@ impl Separator {
         self.display == "always"
     }
 
-    fn is_display_surrounded(&self) -> bool {
-        self.display == "surrounded"
-    }
+    // 'surrounded' is accepted in the config but behaves like 'always' for now
+    // FIXME: https://github.com/TomasTomecek/pretty-git-prompt/issues/33
 
     fn display(&self) -> Option<String> {
         // log!(self, "display separator, value: {:?}", self);
@@ -295,14 +294,67 @@ pub fn create_default_config(path: &PathBuf) -> Result<String, io::Error> {
 }
 
 
+#[cfg(test)]
 mod tests {
     // We'll use this git repo for testing
+    use std::env;
+    use std::fs::{File,OpenOptions};
+    use std::io::{Read};
+    use std::path::{Path};
+    use std::process::{Command,Stdio};
+    use conf::{get_configuration,create_default_config,DEFAULT_CONF,Conf};
+    use constants::{get_default_config_path,ENV_LOCK};
+    use yaml_rust::{YamlLoader};
+    use backend::Backend;
+    use models::DisplayMaster;
+    use git2::{Repository};
+    use tempfile::TempDir;
+
+    macro_rules! init_git {
+        ($dir_var:ident) => {
+            let $dir_var = TempDir::new().expect("Failed to create temporary directory");
+            let _dir_path = $dir_var.path();
+
+            // we could use git2 to create a repo with a commit, but it's soooo complicated
+            let status = Command::new("git")
+                .args(&["-C", _dir_path.to_str().unwrap(), "init", "-b", "master", "."])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .expect("Failed to execute git init");
+            assert!(status.success(), "git init failed with status: {}", status);
+
+            // Configure git user info locally in the repository
+            Command::new("git")
+                .args(&["-C", _dir_path.to_str().unwrap(), "config", "user.email", "pretty-git-prompt@example.com"])
+                .status()
+                .expect("Failed to set git user.email");
+
+            Command::new("git")
+                .args(&["-C", _dir_path.to_str().unwrap(), "config", "user.name", "Git \"Pretty\" Prompter"])
+                .status()
+                .expect("Failed to set git user.name");
+
+            let status = Command::new("git")
+                .args(&["-C", _dir_path.to_str().unwrap(), "commit", "--allow-empty", "-m", "init"])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .expect("Failed to execute git commit");
+            assert!(status.success(), "git commit failed with status: {}", status);
+        }
+    }
+
+
     #[test]
     #[should_panic(expected = "'version' is missing in config file.")]
     fn test_empty_config() {
         let config_text = "{}";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
-        let repo = Repository::discover(".").unwrap();
+
+        init_git!(dir);
+
+        let repo = Repository::discover(dir.path()).unwrap();
         let backend = Backend::new(repo, true);
         let dm: DisplayMaster = DisplayMaster::new(backend, true);
         Conf::new(docs[0].clone(), dm);
@@ -313,61 +365,60 @@ mod tests {
         let config_text = "version: '1'
 values: []";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
-        let repo = Repository::discover(".").unwrap();
+
+        init_git!(dir);
+
+        let repo = Repository::discover(dir.path()).unwrap();
         let backend = Backend::new(repo, true);
         let dm: DisplayMaster = DisplayMaster::new(backend, true);
         Conf::new(docs[0].clone(), dm);
     }
 
-    #[allow(unused_must_use)]
     #[test]
     fn test_create_default_config() {
-        let p = PathBuf::from("/tmp/test_pretty_git_prompt_config1");
-        if Path::new(&p).exists() {
-            remove_file(p.clone());
-        }
+        let conf_dir = TempDir::new().unwrap();
+        let p = conf_dir.path().join("config.yml");
 
         let result = create_default_config(&p);
         assert!(result.is_ok());
 
         let mut file = File::open(p.clone()).unwrap();
         let mut contents = String::new();
-        file.read_to_string(&mut contents);
+        file.read_to_string(&mut contents).unwrap();
         assert_eq!(contents, DEFAULT_CONF);
-
-        remove_file(p.clone());
     }
     #[test]
     fn test_create_default_config_when_exists() {
-        let p = PathBuf::from("/tmp/test_pretty_git_prompt_config2");
+        let conf_dir = TempDir::new().unwrap();
+        let p = conf_dir.path().join("config.yml");
         OpenOptions::new()
                     .write(true)
                     .create(true)
                     .truncate(true)
-                    .open(p.clone());
+                    .open(p.clone()).unwrap();
         assert!(Path::new(&p).exists());
 
         let result = create_default_config(&p);
         assert!(result.is_err());
-
-        remove_file(p.clone());
     }
     #[test]
     fn test_load_default_config() {
-        let p = PathBuf::from("/tmp/test_pretty_git_prompt_config3");
-        if Path::new(&p).exists() {
-            remove_file(p.clone());
-        }
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let conf_dir = TempDir::new().unwrap();
+        env::set_var("XDG_CONFIG_HOME", conf_dir.path());
 
-        let result = create_default_config(&p);
+        let result = create_default_config(&get_default_config_path());
         assert!(result.is_ok());
 
-        let repo = Repository::discover(".").unwrap();
+        init_git!(dir);
+
+        let repo = Repository::discover(dir.path()).unwrap();
         let backend = Backend::new(repo, true);
         let dm: DisplayMaster = DisplayMaster::new(backend, true);
-        let c = get_configuration(None, dm);
-
-        remove_file(p.clone());
+        let mut c = get_configuration(None, dm);
+        // the freshly created default config renders just the branch name
+        // in a repository with a single commit and no remote
+        assert_eq!(c.populate_values(), "master");
     }
 
     #[test]
@@ -375,7 +426,10 @@ values: []";
     fn test_lower_version() {
         let config_text = "version: '0'";
         let docs = YamlLoader::load_from_str(config_text).unwrap();
-        let repo = Repository::discover(".").unwrap();
+
+        init_git!(dir);
+
+        let repo = Repository::discover(dir.path()).unwrap();
         let backend = Backend::new(repo, true);
         let dm: DisplayMaster = DisplayMaster::new(backend, true);
         Conf::new(docs[0].clone(), dm);

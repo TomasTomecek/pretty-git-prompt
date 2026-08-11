@@ -4,6 +4,8 @@
 
 extern crate clap;
 extern crate git2;
+#[cfg(test)]
+extern crate tempfile;
 extern crate yaml_rust;
 
 use std::io::{self, Write};
