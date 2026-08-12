@@ -107,7 +107,7 @@ If you have rust compiler and cargo available on your system, you can compile
 the tool without using a container:
 
 ```
-$ make exec-stable-build
+$ make exec-release-build
 ```
 
 The binary is then available on this path:
@@ -190,45 +190,19 @@ open a new issue.
 
 ## Contributing
 
-### Support
-
 This is an open source project. I don't guarantee any support. Everything is best effort.
-
-
-### Writing code
-
-This project builds upon several principles:
-
- 1. Configurable as much as possible.
- 2. Pretty and useful.
- 3. As few dependencies as possible.
- 4. Easy to contribute to:
-    * Build with a single command.
-    * Build inside predictive environment.
-    * Test with a single command.
 
 If you encounter any issue, please submit it! I will take a look. The best
 thing to do in the meanwhile is to try fixing it yourself.
 
-The whole development environment should be trivial to setup, even run tests.
-
-All you need is [docker](https://github.com/docker/docker) engine running and `make`.
-
-First you need to build container image with rust and all dependencies inside:
-
-```
-$ make nightly-environment
-```
-
-This is using latest nightly rust. The nightly is used because of [clippy](https://github.com/Manishearth/rust-clippy).
-
-And then just make sure all tests are passing and you are not introducing any new warnings:
+The whole development environment should be trivial to setup, even run tests:
+all you need is `podman` and `make`.
 
 ```
 $ make test
 ```
 
-If any of the two `make` invocations above doesn't work for you, please open an issue.
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before you start hacking.
 
 
 ## Credits
