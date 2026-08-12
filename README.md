@@ -11,6 +11,7 @@ Features:
  * You are able to display values such as:
    * git repository state (resolving `merge` conflict, interactive `rebase`, ...)
    * Current branch name.
+   * Name of a tag which points at the checked out commit.
    * Count of changed, newly-added, staged, conflicting files.
    * Number of items in stash.
  * You can track divergence against arbitrary branches.

@@ -81,6 +81,14 @@ values:
       display: surrounded
       pre_format: '│'
       post_format: ''
+      # name of a tag which points exactly at the checked out commit
+    - type: tag
+      pre_format: '#'
+      post_format: ''
+    - type: separator
+      display: surrounded
+      pre_format: '│'
+      post_format: ''
     - type: remote_difference
       remote_branch: 'upstream/master'
       display_if_uptodate: false
@@ -419,6 +427,30 @@ values: []";
         // the freshly created default config renders just the branch name
         // in a repository with a single commit and no remote
         assert_eq!(c.populate_values(), "master");
+    }
+
+    #[test]
+    fn test_tag_is_displayed() {
+        let config_text = "version: '1'
+values:
+    - type: tag
+      pre_format: '#'
+      post_format: ''";
+        let docs = YamlLoader::load_from_str(config_text).unwrap();
+
+        init_git!(dir);
+
+        let status = Command::new("git")
+            .args(&["-C", dir.path().to_str().unwrap(), "tag", "v1.0.0"])
+            .status()
+            .expect("Failed to execute git tag");
+        assert!(status.success(), "git tag failed with status: {}", status);
+
+        let repo = Repository::discover(dir.path()).unwrap();
+        let backend = Backend::new(repo, true);
+        let dm: DisplayMaster = DisplayMaster::new(backend, true);
+        let mut c = Conf::new(docs[0].clone(), dm);
+        assert_eq!(c.populate_values(), "#v1.0.0");
     }
 
     #[test]

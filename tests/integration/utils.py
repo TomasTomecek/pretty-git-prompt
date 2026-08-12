@@ -48,6 +48,13 @@ def reset_hard(ref):
 def checkout_ref(ref):
     g(["checkout", ref, "--"])
 
+def tag(name, annotated=False):
+    c = ["tag"]
+    if annotated:
+        c += ["-a", "-m", "tag message"]
+    c.append(name)
+    g(c)
+
 def checkout_b(branch_name):
     g(["checkout", "-b", branch_name])
 
@@ -187,6 +194,34 @@ class RWODetached(RWOLocalCommits):
         super().do()
         self.co_commit = subprocess.check_output(["git", "rev-parse", "HEAD^"]).decode("utf-8").rstrip()
         checkout_ref(self.co_commit)
+
+
+class TaggedRepo(SimpleRepo):
+    def do(self):
+        super().do()
+        tag("v1.0.0")
+
+
+class AnnotatedTaggedRepo(SimpleRepo):
+    def do(self):
+        super().do()
+        tag("v1.0.0", annotated=True)
+
+
+class TaggedRepoWithNewerCommit(TaggedRepo):
+    def do(self):
+        super().do()
+        create_file("file.txt", "text6")
+        add_file("file.txt")
+        commit()
+
+
+class CheckedOutTag(TaggedRepoWithNewerCommit):
+    def do(self):
+        super().do()
+        self.tagged_commit = subprocess.check_output(
+            ["git", "rev-parse", "v1.0.0^{commit}"]).decode("utf-8").rstrip()
+        checkout_ref("v1.0.0")
 
 
 class MergeConflict(RWOLocalCommits):

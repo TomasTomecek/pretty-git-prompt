@@ -124,6 +124,15 @@ You can validate the metadata locally with `tmt lint` (`pip install tmt`).
   `src/conf.rs`, which is what users get from
   `pretty-git-prompt create-default-config`.
 
+## Generated files don't belong to the repository
+
+Please never commit files which are generated while building the tool or
+running the tests, most notably `target/` (Rust build artifacts), `__pycache__/`
+and `*.pyc` (Python bytecode of the integration test suite) and `.pytest_cache/`.
+All of them are listed in [`.gitignore`](./.gitignore); if you committed one by
+accident, drop it from the index with
+`git rm -r --cached path/to/generated/files`.
+
 ## Releasing
 
 1. Bump `version` in `Cargo.toml` and tag the commit.

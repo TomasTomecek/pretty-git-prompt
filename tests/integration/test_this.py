@@ -56,6 +56,26 @@ def test_rwo_detached(tmpdir):
         assert r.run() == r.co_commit[:7]
 
 
+def test_lightweight_tag(tmpdir):
+    with TaggedRepo(tmpdir) as r:
+        assert r.run() == "master│#v1.0.0"
+
+
+def test_annotated_tag(tmpdir):
+    with AnnotatedTaggedRepo(tmpdir) as r:
+        assert r.run() == "master│#v1.0.0"
+
+
+def test_tag_not_on_head(tmpdir):
+    with TaggedRepoWithNewerCommit(tmpdir) as r:
+        assert r.run() == "master"
+
+
+def test_checked_out_tag(tmpdir):
+    with CheckedOutTag(tmpdir) as r:
+        assert r.run() == "%s│#v1.0.0" % r.tagged_commit[:7]
+
+
 def test_merge_conflict(tmpdir):
     with MergeConflict(tmpdir) as r:
         assert r.run() == "merge│master↑1│✖1"

@@ -108,6 +108,28 @@ impl<'a> StashStatus<'a> {
 
 
 #[derive(Debug)]
+pub struct TagStatus<'a> {
+    debug: bool,
+    backend: &'a Backend,
+    value: SimpleValue,
+}
+
+impl<'a> TagStatus<'a> {
+    fn new(simple_value: &SimpleValue, backend: &'a Backend, debug: bool) -> TagStatus<'a> {
+        TagStatus{
+            value: simple_value.clone(), backend: backend, debug: debug
+        }
+    }
+
+    fn display(&self) -> Option<String> {
+        log!(self, "display tag, value: {:?}", self);
+        self.backend.get_tag_name().map(
+            |tag| format_value(&self.value.pre_format, &self.value.post_format, &tag))
+    }
+}
+
+
+#[derive(Debug)]
 pub struct FileStatus<'a> {
     debug: bool,
     backend: &'a mut Backend,
@@ -300,6 +322,7 @@ impl DisplayMaster {
     pub fn display_value(&mut self, value_yaml: &Yaml, simple_value: &SimpleValue) -> Option<String> {
         let o: Option<String> = match simple_value.value_type.as_str() {
             "repository_state" => RepoStatus::new(simple_value, &self.backend, self.debug).display(),
+            "tag" => TagStatus::new(simple_value, &self.backend, self.debug).display(),
             "new" |
             "changed" |
             "staged" |

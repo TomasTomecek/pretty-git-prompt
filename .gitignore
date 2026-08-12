@@ -14,3 +14,8 @@ pretty-git-prompt-*.crate
 # RPM building
 SRPMS/
 x86_64/
+
+# Python bytecode and caches produced by the integration test suite
+__pycache__/
+*.pyc
+.pytest_cache/
