@@ -210,15 +210,17 @@ If you need a binary locally, that is still `make exec-release-build` or
 `PROJECT_NAME=pretty-git-prompt TARGET=x86_64-unknown-linux-gnu
 TRAVIS_TAG=0.2.3 make release`.
 
-The crates.io step needs a `CARGO_REGISTRY_TOKEN` repository secret (*Settings*
-→ *Secrets and variables* → *Actions*) holding a crates.io API token with
-publish rights for `pretty-git-prompt`; only the repository owner
-(@TomasTomecek) can add it. Without it the step is skipped with a warning
-instead of failing the release — but Fedora needs the crate: the spec uses
-`%{crates_source}`, so the downstream build only works once the version is on
-crates.io. Historically this step lagged behind the tag by weeks (0.2.2 was
-tagged in February 2024 and published in March 2024), which is the main reason
-it is automated now.
+No crates.io API token is stored anywhere: the workflow uses [trusted
+publishing](https://crates.io/docs/trusted-publishing), i.e. it exchanges the
+job's OIDC token (`permissions: id-token: write`) for a short-lived registry
+token via `rust-lang/crates-io-auth-action`. This requires the crate owner
+(@TomasTomecek) to have registered this repository and the `release` workflow as
+a trusted publisher in the crates.io settings of `pretty-git-prompt`; if that is
+missing, the `crates-io` job fails while the GitHub release itself is already
+done. Publishing matters for Fedora: the spec uses `%{crates_source}`, so the
+downstream build only works once the version is on crates.io. Historically this
+step lagged behind the tag by weeks (0.2.2 was tagged in February 2024 and
+published in March 2024), which is the main reason it is automated now.
 
 ### 5. Fedora
 
