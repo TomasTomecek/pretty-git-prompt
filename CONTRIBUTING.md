@@ -140,11 +140,11 @@ release, a crates.io upload and — from 0.2.2 on — an automated Fedora update
 Versions follow semver-ish `MAJOR.MINOR.PATCH` and both tags and releases are
 named after the bare version, without a `v` prefix (`0.2.2`, not `v0.2.2`).
 
-Only the first three steps are done by hand: bump the version, merge it, push
-the tag. Pushing the tag starts
-[`.github/workflows/release.yml`](./.github/workflows/release.yml), which does
-the GitHub release, the binaries and the crates.io upload; Fedora then follows
-from the release event via packit.
+Only the first two steps are done by hand: bump the version and merge it.
+Merging the release commit into `master` starts
+[`.github/workflows/release.yml`](./.github/workflows/release.yml), which tags
+it and does the GitHub release, the binaries and the crates.io upload; Fedora
+then follows from the release event via packit.
 
 ### 1. Prepare the release commit
 
@@ -182,21 +182,15 @@ the `rpm-build:*` jobs prove that `cargo package` still produces a valid
 archive and that the spec builds with the new version, `testing-farm:*` runs
 the test plan against those RPMs. Merge once they are green.
 
-### 3. Tag
+### 3. Watch the release workflow
 
-Tag the merge commit on `master` and push the tag:
+Merging the pull request triggers the `release` workflow, which
 
-```
-$ git checkout master && git pull
-$ git tag 0.2.3
-$ git push origin 0.2.3
-```
-
-### 4. Watch the release workflow
-
-The pushed tag triggers the `release` workflow, which
-
-1. refuses to continue if the tag does not equal `version` in `Cargo.toml`,
+1. tags the merge as `0.2.3` and pushes the tag — this is the `Tag the release`
+   job, it is what decides that a push to `master` is a release at all: it
+   takes the version from `Cargo.toml` and continues only if the push contains
+   the matching `0.2.3 release` commit, so any other push to `master` ends
+   there. An already existing tag is reused rather than moved,
 2. creates the GitHub release as a *draft*, titled after the tag, with GitHub's
    generated release notes (the same shape as the 0.2.2 notes: merged pull
    requests, new contributors, a `Full Changelog` compare link),
@@ -209,11 +203,18 @@ The pushed tag triggers the `release` workflow, which
    not be seen without its binaries,
 5. runs `cargo publish`, skipping it if the version is already on crates.io.
 
+Pushing the tag by hand (`git tag 0.2.3 && git push origin 0.2.3`) still works
+and starts the same workflow, which then refuses to continue if the tag does
+not equal `version` in `Cargo.toml`. A tag pushed by the workflow itself does
+not start a second run of it — GitHub does not trigger workflows from events
+made with the automatic `GITHUB_TOKEN` — which is why the tagging is a job of
+this workflow instead of a separate one.
+
 The same workflow can be started manually (*Actions* → *release* → *Run
 workflow*) with an existing tag as the input, e.g. to redo a run that failed
-halfway through. Everything in it is idempotent: an existing release is
-reused, assets are re-uploaded with `--clobber` and an already published crate
-is left alone.
+halfway through. Everything in it is idempotent: an existing tag and release
+are reused, assets are re-uploaded with `--clobber` and an already published
+crate is left alone.
 
 If you need a binary locally, that is still `make exec-release-build` or
 `PROJECT_NAME=pretty-git-prompt TARGET=x86_64-unknown-linux-gnu
@@ -231,7 +232,7 @@ downstream build only works once the version is on crates.io. Historically this
 step lagged behind the tag by weeks (0.2.2 was tagged in February 2024 and
 published in March 2024), which is the main reason it is automated now.
 
-### 5. Fedora
+### 4. Fedora
 
 Publishing the GitHub release triggers packit's `propose_downstream` job, which
 opens the dist-git pull request for `rawhide`; merging it triggers the
