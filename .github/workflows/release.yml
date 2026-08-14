@@ -1,13 +1,21 @@
 ---
-# Automates an upstream release: GitHub release + binary assets + crates.io.
+# Automates an upstream release: tag + GitHub release + binary assets +
+# crates.io.
 #
-# The maintainer merges the "X.Y.Z release" commit and pushes the X.Y.Z tag,
-# everything below happens on its own. See the Releasing section in
-# CONTRIBUTING.md.
+# The maintainer merges the "X.Y.Z release" commit, everything below happens on
+# its own: the merge is tagged X.Y.Z and released. Pushing the tag by hand
+# works too, and so does re-running an existing tag from Actions. See the
+# Releasing section in CONTRIBUTING.md.
+#
+# A tag pushed by this workflow does not start a second run of it, GitHub does
+# not trigger workflows from events made with the automatic GITHUB_TOKEN, which
+# is why the tagging is a job of this workflow and not a separate one.
 name: release
 
 on:
   push:
+    branches:
+      - master
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
@@ -24,37 +32,89 @@ env:
   PROJECT_NAME: pretty-git-prompt
 
 jobs:
-  draft:
-    name: Create draft release
+  # decides whether this push releases anything and makes sure the tag exists
+  prepare:
+    name: Tag the release
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
 
-      - name: Check that the tag matches version in Cargo.toml
+      # a push to master releases only when it brings in the "X.Y.Z release"
+      # commit the release pull request is made of, so that every other push
+      # does nothing
+      - name: Which version is being released?
         id: version
+        env:
+          IS_BRANCH_PUSH: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+          BEFORE: ${{ github.event.before }}
         run: |
           set -eu
-          version="${{ inputs.tag || github.ref_name }}"
-          cargo_version=$(sed -n '/^\[package\]/,/^\[/{s/^version *= *"\(.*\)"/\1/p}' Cargo.toml)
-          if [ "$version" != "$cargo_version" ]; then
-            echo "::error::tag $version does not match version $cargo_version in Cargo.toml"
-            exit 1
+          version_from_cargo_toml() {
+            sed -n '/^\[package\]/,/^\[/{s/^version *= *"\(.*\)"/\1/p}' Cargo.toml
+          }
+          if [ "$IS_BRANCH_PUSH" = "true" ]; then
+            version=$(version_from_cargo_toml)
+            if git rev-parse --quiet --verify "${BEFORE}^{commit}" >/dev/null 2>&1; then
+              pushed=$(git log --format=%s "$BEFORE..HEAD")
+            else
+              # a freshly created or force pushed branch: the merge only
+              pushed=$(git log --format=%s --max-count=2 HEAD)
+            fi
+            # GitHub appends " (#123)" to the subject when squash merging
+            subject=$(printf '%s' "$version release" | sed 's/\./\\./g')
+            if ! printf '%s\n' "$pushed" | grep -Eq "^${subject}( \(#[0-9]+\))?$"; then
+              echo "::notice::no \"$version release\" commit in this push, nothing to do"
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            version="${INPUT_TAG:-$REF_NAME}"
+            git checkout --quiet "$version"
+            cargo_version=$(version_from_cargo_toml)
+            if [ "$version" != "$cargo_version" ]; then
+              echo "::error::$version does not match version $cargo_version in Cargo.toml"
+              exit 1
+            fi
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release=true" >> "$GITHUB_OUTPUT"
 
+      - name: Push the tag
+        if: steps.version.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -eu
+          if [ -n "$(git ls-remote --tags origin "refs/tags/$VERSION")" ]; then
+            echo "tag $VERSION is already pushed, reusing it"
+            exit 0
+          fi
+          git tag "$VERSION"
+          git push origin "refs/tags/$VERSION"
+
+  draft:
+    name: Create draft release
+    needs: prepare
+    if: needs.prepare.outputs.release == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
       # the release is created as a draft so that the assets are in place
       # before it is published: publishing is the event packit reacts to
       - name: Create the draft release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -eu
           if gh release view "$VERSION" >/dev/null 2>&1; then
@@ -65,7 +125,7 @@ jobs:
 
   build:
     name: Build ${{ matrix.target }}
-    needs: draft
+    needs: [prepare, draft]
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
@@ -82,7 +142,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ needs.prepare.outputs.version }}
 
       - name: Build the binary
         env:
@@ -96,7 +156,7 @@ jobs:
       - name: Name the asset the same way older releases did
         env:
           TARGET: ${{ matrix.target }}
-          VERSION: ${{ needs.draft.outputs.version }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -eu
           cp -av "target/$TARGET/release/$PROJECT_NAME" \
@@ -106,32 +166,32 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET: ${{ matrix.target }}
-          VERSION: ${{ needs.draft.outputs.version }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           gh release upload "$VERSION" \
             "$PROJECT_NAME-$VERSION-$TARGET" --clobber
 
   publish-release:
     name: Publish the release
-    needs: [draft, build]
+    needs: [prepare, draft, build]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ needs.prepare.outputs.version }}
 
       # this is what triggers packit's propose_downstream job
       - name: Undraft the release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.draft.outputs.version }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: gh release edit "$VERSION" --draft=false --latest
 
   crates-io:
     name: Publish to crates.io
-    needs: [draft, build]
+    needs: [prepare, draft, build]
     runs-on: ubuntu-24.04
     permissions:
       # for the OIDC token crates.io trusted publishing exchanges for a
@@ -140,12 +200,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ needs.prepare.outputs.version }}
 
       - name: Is this version on crates.io already?
         id: check
         env:
-          VERSION: ${{ needs.draft.outputs.version }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -eu
           if curl -sSf -H "user-agent: $PROJECT_NAME release workflow" \
