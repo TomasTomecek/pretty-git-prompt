@@ -140,6 +140,12 @@ release, a crates.io upload and — from 0.2.2 on — an automated Fedora update
 Versions follow semver-ish `MAJOR.MINOR.PATCH` and both tags and releases are
 named after the bare version, without a `v` prefix (`0.2.2`, not `v0.2.2`).
 
+Only the first three steps are done by hand: bump the version, merge it, push
+the tag. Pushing the tag starts
+[`.github/workflows/release.yml`](./.github/workflows/release.yml), which does
+the GitHub release, the binaries and the crates.io upload; Fedora then follows
+from the release event via packit.
+
 ### 1. Prepare the release commit
 
 Start from an up to date `master` and open a branch named after the version
@@ -186,42 +192,46 @@ $ git tag 0.2.3
 $ git push origin 0.2.3
 ```
 
-### 4. GitHub release
+### 4. Watch the release workflow
 
-Create the release from the tag
-([releases page](https://github.com/TomasTomecek/pretty-git-prompt/releases)),
-with the tag name as the title, and use GitHub's *Generate release notes* — the
-0.2.2 notes are the generated list of merged pull requests, new contributors
-and a `Full Changelog` compare link, so keep that shape.
+The pushed tag triggers the `release` workflow, which
 
-Binaries are optional: 0.1.x and 0.2.0 shipped
-`pretty-git-prompt-${VERSION}-${TARGET}` assets built by the `make release`
-target (`LIBZ_SYS_STATIC=1 cargo build --target ${TARGET} --release`), which
-used to be driven by Travis CI. Since 0.2.1 no assets are attached and users
-are expected to install the RPM or build from source. If you do attach them,
-build the target you want and upload the file:
+1. refuses to continue if the tag does not equal `version` in `Cargo.toml`,
+2. creates the GitHub release as a *draft*, titled after the tag, with GitHub's
+   generated release notes (the same shape as the 0.2.2 notes: merged pull
+   requests, new contributors, a `Full Changelog` compare link),
+3. builds `LIBZ_SYS_STATIC=1 cargo build --target ${TARGET} --release` for
+   `x86_64-unknown-linux-gnu`, `x86_64-apple-darwin` and
+   `aarch64-apple-darwin` and attaches the binaries as
+   `pretty-git-prompt-${VERSION}-${TARGET}`, the names 0.1.x and 0.2.0 used,
+4. publishes the release once all the assets are attached — it is deliberately
+   drafted first, publishing is what packit reacts to and the release should
+   not be seen without its binaries,
+5. runs `cargo publish`, skipping it if the version is already on crates.io.
 
-```
-$ make exec-release-build  # or: PROJECT_NAME=pretty-git-prompt TARGET=x86_64-unknown-linux-gnu TRAVIS_TAG=0.2.3 make release
-$ gh release upload 0.2.3 pretty-git-prompt-0.2.3-x86_64-unknown-linux-gnu
-```
+The same workflow can be started manually (*Actions* → *release* → *Run
+workflow*) with an existing tag as the input, e.g. to redo a run that failed
+halfway through. Everything in it is idempotent: an existing release is
+reused, assets are re-uploaded with `--clobber` and an already published crate
+is left alone.
 
-### 5. crates.io
+If you need a binary locally, that is still `make exec-release-build` or
+`PROJECT_NAME=pretty-git-prompt TARGET=x86_64-unknown-linux-gnu
+TRAVIS_TAG=0.2.3 make release`.
 
-The crate is published manually (`cargo publish` needs a crates.io token with
-publish rights for `pretty-git-prompt`):
+No crates.io API token is stored anywhere: the workflow uses [trusted
+publishing](https://crates.io/docs/trusted-publishing), i.e. it exchanges the
+job's OIDC token (`permissions: id-token: write`) for a short-lived registry
+token via `rust-lang/crates-io-auth-action`. This requires the crate owner
+(@TomasTomecek) to have registered this repository and the `release` workflow as
+a trusted publisher in the crates.io settings of `pretty-git-prompt`; if that is
+missing, the `crates-io` job fails while the GitHub release itself is already
+done. Publishing matters for Fedora: the spec uses `%{crates_source}`, so the
+downstream build only works once the version is on crates.io. Historically this
+step lagged behind the tag by weeks (0.2.2 was tagged in February 2024 and
+published in March 2024), which is the main reason it is automated now.
 
-```
-$ cargo publish --dry-run
-$ cargo publish
-```
-
-This is a separate step from the GitHub release and has historically lagged
-behind it (0.2.2 was tagged in February 2024 and published in March 2024).
-Publishing matters for Fedora: the spec uses `%{crates_source}`, so the
-downstream build only works once the version is on crates.io.
-
-### 6. Fedora
+### 5. Fedora
 
 Publishing the GitHub release triggers packit's `propose_downstream` job, which
 opens the dist-git pull request for `rawhide`; merging it triggers the
