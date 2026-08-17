@@ -36,6 +36,31 @@ def test_rwo_and_upstream(tmpdir):
         assert r.run() == "master↑1│upstream↑1↓1"
 
 
+def test_empty_repo_with_fetched_upstream(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: remote_difference
+      remote_branch: 'upstream/master'
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<LOCAL_BRANCH>'
+          post_format: ''
+        - type: ahead
+          pre_format: '↑'
+          post_format: ''
+        - type: behind
+          pre_format: '↓'
+          post_format: ''"""
+    with EmptyRepoWithFetchedUpstream(tmpdir) as r:
+        assert r.run() == "master"
+        assert r.run(custom_config_content=config) == ""
+
+
 def test_rwo_no_tracking(tmpdir):
     with RWOWithoutTracking(tmpdir) as r:
         assert r.run() == "master"

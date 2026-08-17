@@ -271,7 +271,8 @@ impl<'a> RemoteTracking<'a> {
             self.remote_branch.clone()) {
             Some(x) => x,
             None => {
-                panic!("no ahead behind stats found for = {:?}", self.remote_branch);
+                log!(self, "no ahead behind stats found for = {:?}", self.remote_branch);
+                return None;
             },
         };
         let local_branch_name: String = match a_b.local_branch_name.clone() {
