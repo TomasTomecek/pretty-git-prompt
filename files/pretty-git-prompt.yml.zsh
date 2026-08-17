@@ -37,6 +37,9 @@ values:
       # remote_branch: ''
       # display the remote even if there is no difference with current branch (required), type bool
       display_if_uptodate: true
+      # what <REMOTE_FIRST_LETTER> renders as when there is no remote
+      # counterpart (optional, defaults to '_'), type string
+      # no_remote_placeholder: '_'
       pre_format: ''
       post_format: ''
       # values which can be displayed as part of 'remote_difference'
@@ -48,7 +51,8 @@ values:
           #  * <LOCAL_BRANCH> will be replaced with current branch name
           #  * <REMOTE_BRANCH> will be replaced with name of remote branch
           #  * <REMOTE_FIRST_LETTER> will be replaced with the first letter of
-          #    a remote name, or with '_' if the branch has no remote counterpart
+          #    a remote name, or with 'no_remote_placeholder' if the branch has
+          #    no remote counterpart
           pre_format: '%{%F{blue}%}<LOCAL_BRANCH>'
           post_format: '%{%f%}'
           # the number of files present locally which are missing in remote repo

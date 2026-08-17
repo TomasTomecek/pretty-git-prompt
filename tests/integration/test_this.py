@@ -276,3 +276,21 @@ values:
           post_format: ''"""
     with RWOLocalCommits(tmpdir) as r:
         assert r.run(custom_config_content=config) == "origin/master"
+
+
+def test_remote_first_letter_custom_placeholder(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: remote_difference
+      display_if_uptodate: true
+      no_remote_placeholder: '∅'
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<REMOTE_FIRST_LETTER>/<LOCAL_BRANCH>'
+          post_format: ''"""
+    with SimpleRepo(tmpdir) as r:
+        assert r.run(custom_config_content=config) == "∅/master"

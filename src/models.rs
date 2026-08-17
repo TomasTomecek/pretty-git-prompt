@@ -180,6 +180,7 @@ impl<'a> FileStatus<'a> {
 pub struct RemoteTracking<'a> {
     remote_branch: Option<RemoteBranch>,
     display_if_uptodate: bool,
+    no_remote_placeholder: String,
     debug: bool,
     backend: &'a  Backend,
     value: SimpleValue,
@@ -213,6 +214,10 @@ impl<'a> RemoteTracking<'a> {
             Some(b) => b,
             None => panic!("display_if_uptodate in {:?} is not specified", value_yaml),
         };
+        let no_remote_placeholder = match value_yaml["no_remote_placeholder"].as_str() {
+            Some(s) => s.to_string(),
+            None => NO_REMOTE_PLACEHOLDER.to_string(),
+        };
         let mut values: Vec<SimpleValue> = Vec::new();
         match value_yaml["values"].as_vec() {
             Some(v) => {
@@ -225,7 +230,7 @@ impl<'a> RemoteTracking<'a> {
         RemoteTracking{
             value: simple_value.clone(), backend: backend, debug: debug,
             display_if_uptodate: display_if_uptodate, values: values,
-            remote_branch: remote_branch
+            remote_branch: remote_branch, no_remote_placeholder: no_remote_placeholder
         }
     }
 
@@ -290,7 +295,7 @@ impl<'a> RemoteTracking<'a> {
         let remote_name: String = a_b.remote_name.clone().unwrap_or_default();
         let remote_first_letter: String = match remote_name.chars().next() {
             Some(c) => c.to_string(),
-            None => NO_REMOTE_PLACEHOLDER.to_string(),
+            None => self.no_remote_placeholder.clone(),
         };
         special_values.insert("<REMOTE_FIRST_LETTER>".to_string(), remote_first_letter);
         special_values.insert("<REMOTE>".to_string(), remote_name);
