@@ -224,3 +224,98 @@ values:
     print(config)
     with SimpleRepo(tmpdir) as r:
         assert r.run(custom_config_content=config) == ""
+
+
+REMOTE_FIRST_LETTER_CONFIG = """\
+---
+version: '1'
+values:
+    - type: remote_difference
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<REMOTE_FIRST_LETTER>/<LOCAL_BRANCH>'
+          post_format: ''
+        - type: ahead
+          pre_format: '↑'
+          post_format: ''
+        - type: behind
+          pre_format: '↓'
+          post_format: ''"""
+
+
+def test_remote_first_letter(tmpdir):
+    with RWOLocalCommits(tmpdir) as r:
+        assert r.run(custom_config_content=REMOTE_FIRST_LETTER_CONFIG) == "o/master↑1"
+
+
+def test_remote_first_letter_without_remote(tmpdir):
+    with SimpleRepo(tmpdir) as r:
+        assert r.run(custom_config_content=REMOTE_FIRST_LETTER_CONFIG) == "_/master"
+
+
+def test_remote_first_letter_distinguishes_remotes(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: remote_difference
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<REMOTE_FIRST_LETTER>/<LOCAL_BRANCH>'
+          post_format: ''
+    - type: separator
+      display: always
+      pre_format: '│'
+      post_format: ''
+    - type: remote_difference
+      remote_branch: 'upstream/master'
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<REMOTE_FIRST_LETTER>/<LOCAL_BRANCH>'
+          post_format: ''"""
+    with RWOAndUpstream(tmpdir) as r:
+        assert r.run(custom_config_content=config) == "o/master│u/master"
+
+
+def test_tracked_remote_name(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: remote_difference
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<REMOTE>/<LOCAL_BRANCH>'
+          post_format: ''"""
+    with RWOLocalCommits(tmpdir) as r:
+        assert r.run(custom_config_content=config) == "origin/master"
+
+
+def test_remote_first_letter_custom_placeholder(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: remote_difference
+      display_if_uptodate: true
+      no_remote_placeholder: '∅'
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<REMOTE_FIRST_LETTER>/<LOCAL_BRANCH>'
+          post_format: ''"""
+    with SimpleRepo(tmpdir) as r:
+        assert r.run(custom_config_content=config) == "∅/master"
