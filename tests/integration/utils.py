@@ -3,9 +3,30 @@ import shutil
 import subprocess
 import tempfile
 
+GIT_CONFIG = """\
+[user]
+	name = "Git \\"Pretty\\" Prompter"
+	email = pretty-git-prompt@example.com
+[init]
+	defaultBranch = master
+"""
+
+
 def d():
     """ debug via running shell; need to run py.test with -s """
     subprocess.call(["zsh", "-i"])
+
+
+def isolate_git_config(dir_path):
+    """
+    make git use a throw-away global config placed in dir_path: user's config
+    neither affects nor is affected by the tests
+    """
+    config_path = os.path.join(str(dir_path), "gitconfig")
+    with open(config_path, "w") as fd:
+        fd.write(GIT_CONFIG)
+    os.environ["GIT_CONFIG_GLOBAL"] = config_path
+    os.environ["GIT_CONFIG_SYSTEM"] = os.devnull
 
 
 def g(a):
@@ -73,13 +94,12 @@ def append_file(filename, content):
 class G():
     def __init__(self, tmpdir):
         self.tmpdir = tmpdir
+        isolate_git_config(tmpdir)
         self.repo = tmpdir.mkdir("repo")
         self.origin = tmpdir.mkdir("origin")
         subprocess.check_output(["git", "init", "--bare", str(self.origin.realpath())])
         self.upstream = tmpdir.mkdir("upstream")
         subprocess.check_output(["git", "init", "--bare", str(self.upstream.realpath())])
-        subprocess.check_output(["git", "config", "--global", "user.email", "pretty-git-prompt@example.com"])
-        subprocess.check_output(["git", "config", "--global", "user.name", "Git \"Pretty\" Prompter"])
         self.cwd = self.repo.chdir()
 
     def __enter__(self):

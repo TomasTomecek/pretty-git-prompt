@@ -15,6 +15,26 @@ import py
 
 d = tempfile.mkdtemp()
 
+GIT_CONFIG = """\
+[user]
+	name = "Git \\"Pretty\\" Prompter"
+	email = pretty-git-prompt@example.com
+[init]
+	defaultBranch = master
+"""
+
+
+def isolate_git_config(dir_path):
+    """
+    make git use a throw-away global config placed in dir_path: user's config
+    neither affects nor is affected by the demo
+    """
+    config_path = os.path.join(str(dir_path), "gitconfig")
+    with open(config_path, "w") as fd:
+        fd.write(GIT_CONFIG)
+    os.environ["GIT_CONFIG_GLOBAL"] = config_path
+    os.environ["GIT_CONFIG_SYSTEM"] = os.devnull
+
 
 class Slacker:
     """ give a command time to start & finish """
@@ -72,13 +92,12 @@ class G():
 
     def __init__(self, tmpdir, shell_name):
         self.tmpdir = tmpdir
+        isolate_git_config(tmpdir)
         self.repo = tmpdir.mkdir("repo")
         self.origin = tmpdir.mkdir("origin")
         subprocess.check_output(["git", "init", "--bare", str(self.origin.realpath())])
         self.upstream = tmpdir.mkdir("upstream")
         subprocess.check_output(["git", "init", "--bare", str(self.upstream.realpath())])
-        subprocess.check_output(["git", "config", "--global", "user.email", "pretty-git-prompt@example.com"])
-        subprocess.check_output(["git", "config", "--global", "user.name", "Git \"Pretty\" Prompter"])
         self.cwd = self.repo.chdir()
         self.z = pexpect.spawn("{} -i".format(shell_name), encoding=sys.getdefaultencoding())
         self.s = Slacker()
