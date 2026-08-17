@@ -159,6 +159,82 @@ For more info about the presented solution, please read these [superuser.com](ht
 [stackoverflow](http://stackoverflow.com/a/13997892/909579) threads.
 
 
+### Skipping selected repositories
+
+pretty-git-prompt asks libgit2 for the repository status every time your prompt
+is rendered. In huge repositories (linux, netbsd-src, kubernetes, ...) this can
+take seconds, which makes the shell feel sluggish.
+
+There is no ignore list inside the config file: the decision is made in your
+shell, by wrapping the call in a function which prints nothing for the paths
+you don't care about. Both snippets below match a directory and everything
+below it, so subdirectories of the repository are skipped as well.
+
+#### zsh
+
+```shell
+# Directory trees where pretty-git-prompt should stay quiet.
+PGP_IGNORED_PATHS=(
+  ~/dev/linux
+  ~/dev/netbsd-src
+)
+
+pretty_git_prompt_unless_ignored() {
+  local ignored
+  for ignored in $PGP_IGNORED_PATHS; do
+    [[ $PWD == $ignored || $PWD == $ignored/* ]] && return 0
+  done
+  pretty-git-prompt
+}
+
+setopt PROMPT_SUBST
+RPROMPT='$(pretty_git_prompt_unless_ignored)'
+```
+
+#### bash
+
+```shell
+PGP_IGNORED_PATHS=(
+  "$HOME/dev/linux"
+  "$HOME/dev/netbsd-src"
+)
+
+pretty_git_prompt_unless_ignored() {
+  local ignored
+  for ignored in "${PGP_IGNORED_PATHS[@]}"; do
+    if [[ $PWD == "$ignored" || $PWD == "$ignored"/* ]]; then
+      return 0
+    fi
+  done
+  pretty-git-prompt
+}
+
+pretty_prompt() { PS1="$(pretty_git_prompt_unless_ignored)\n\$ "; }
+export PROMPT_COMMAND="pretty_prompt ; $PROMPT_COMMAND"
+```
+
+If you prefer to mark the repositories themselves instead of listing them in
+your shell config, put a marker file in the repository, e.g.
+`touch ~/dev/linux/.git/pretty-git-prompt-ignore`, and check for it instead:
+
+```shell
+pretty_git_prompt_unless_ignored() {
+  local git_dir
+  git_dir=$(git rev-parse --absolute-git-dir 2>/dev/null) || return 0
+  [[ -e $git_dir/pretty-git-prompt-ignore ]] && return 0
+  pretty-git-prompt
+}
+```
+
+Before you exclude a repository, it may be worth speeding git itself up, since
+pretty-git-prompt is as fast as the status of the repository it inspects:
+
+```
+$ git config core.untrackedCache true
+$ git config core.fsmonitor true
+```
+
+
 ## Solving problems
 
 If you encounter a problem, you may run the tool with verbose output to help you resolve the issue:
