@@ -287,10 +287,13 @@ impl<'a> RemoteTracking<'a> {
             Some(v) => special_values.insert("<REMOTE_BRANCH>".to_string(), v),
             None => special_values.insert("<REMOTE_BRANCH>".to_string(), "".to_string()),
         };
-        match a_b.remote_name.clone() {
-            Some(v) => special_values.insert("<REMOTE>".to_string(), v),
-            None => special_values.insert("<REMOTE>".to_string(), "".to_string()),
+        let remote_name: String = a_b.remote_name.clone().unwrap_or_default();
+        let remote_first_letter: String = match remote_name.chars().next() {
+            Some(c) => c.to_string(),
+            None => NO_REMOTE_PLACEHOLDER.to_string(),
         };
+        special_values.insert("<REMOTE_FIRST_LETTER>".to_string(), remote_first_letter);
+        special_values.insert("<REMOTE>".to_string(), remote_name);
 
         let mut response: String = "".to_string();
         for value in self.values.clone() {

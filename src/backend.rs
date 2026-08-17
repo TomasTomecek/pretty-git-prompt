@@ -265,9 +265,10 @@ impl Backend {
         };
         let remote_name = match upstream_reference.name() {
             Some(n) => {
-                let v: Vec<&str> = n.splitn(3, '/').collect();
-                if v.len() >= 3 {
-                    v[1]
+                // refs/remotes/<REMOTE>/<BRANCH>
+                let v: Vec<&str> = n.splitn(4, '/').collect();
+                if v.len() >= 4 {
+                    v[2]
                 } else {
                     log!(self, "Can't figure out remote name: {:?}", v);
                     return None;

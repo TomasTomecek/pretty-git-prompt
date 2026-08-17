@@ -67,6 +67,8 @@ values:
           #  * <REMOTE> will be replaced with name of a remote
           #  * <LOCAL_BRANCH> will be replaced with current branch name
           #  * <REMOTE_BRANCH> will be replaced with name of remote branch
+          #  * <REMOTE_FIRST_LETTER> will be replaced with the first letter of
+          #    a remote name, or with '_' if the branch has no remote counterpart
           pre_format: '<LOCAL_BRANCH>'
           post_format: ''
           # the number of files present locally which are missing in remote repo
