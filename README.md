@@ -265,6 +265,52 @@ In case anything is not clear from the comments inside the config files, please
 open a new issue.
 
 
+### Picking colors
+
+`pre_format` and `post_format` expect prompt escapes of your shell, which a
+terminal does not render on its own. These two subcommands translate them, so
+you can see the result without touching your shell config:
+
+```
+$ pretty-git-prompt list-colors
+```
+
+prints every color and text style rendered in your terminal, next to the
+snippet to paste into the config file:
+
+```
+        color                zsh
+  ████  blue (4)             %{%F{blue}%}…%{%f%}
+```
+
+The list ends with the 256 color palette, so you can pick a number for
+`%{%F{166}%}` or `\[\e[38;5;166m\]`.
+
+```
+$ pretty-git-prompt preview
+```
+
+renders your config for the current repository. With `--demo` it renders made
+up repository states instead, which is handy while editing the config outside
+of a repository, or to see values you rarely hit:
+
+```
+$ pretty-git-prompt preview --demo
+  clean repository                     master
+  new, changed and staged files        master│✚3Δ2▶1
+  diverged from the remote branch      feature↑2↓1
+  branch without a remote counterpart  feature
+  tag pointing at HEAD                 master│#0.3.0
+  conflict during a merge              merge│master│Δ1✖1
+  stashed changes                      master│☐2
+  detached HEAD                        2a4b9c1│Δ1
+```
+
+Both commands guess the shell from the config file, then from `$SHELL`; use
+`--shell bash` or `--shell zsh` to override it. `--no-color` (or the `NO_COLOR`
+environment variable) strips the formatting and prints the plain text.
+
+
 ## Contributing
 
 This is an open source project. I don't guarantee any support. Everything is best effort.
