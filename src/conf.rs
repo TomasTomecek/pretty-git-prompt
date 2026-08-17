@@ -44,7 +44,8 @@ values:
       # condition when to display the separator (required), type string
       # possible values:
       #  * always -- display no matter what
-      #  * surrounded -- show only when there is a value displayed before of after separator
+      #  * surrounded -- show only when there is a value displayed on every side the separator
+      #                  has: on both sides in the middle, on a single side on an edge
       display: surrounded
       pre_format: '│'
       post_format: ''
@@ -164,15 +165,47 @@ impl Separator {
         self.display == "always"
     }
 
-    // 'surrounded' is accepted in the config but behaves like 'always' for now
-    // FIXME: https://github.com/TomasTomecek/pretty-git-prompt/issues/33
-
     fn display(&self) -> Option<String> {
         // log!(self, "display separator, value: {:?}", self);
         Some(format_value(&self.value.pre_format, &self.value.post_format, ""))
     }
 }
 
+
+
+// a value from config together with the string it renders into
+enum Item {
+    // None means the value is not displayed at all
+    Value(Option<String>),
+    Separator { text: String, always: bool },
+}
+
+// a separator with 'display: surrounded' is displayed only when there is a value displayed on
+// every side it has: values on both sides for a separator in the middle and a single value for a
+// separator placed on an edge of the value list
+fn is_surrounded(items: &[Item], idx: usize) -> bool {
+    let (has_value_before, is_set_before) = scan_values(&items[..idx]);
+    let (has_value_after, is_set_after) = scan_values(&items[idx + 1..]);
+    if !is_set_before && !is_set_after {
+        return false;
+    }
+    (is_set_before || !has_value_before) && (is_set_after || !has_value_after)
+}
+
+// (is there a value, is any of the values displayed)
+fn scan_values(items: &[Item]) -> (bool, bool) {
+    let mut has_value = false;
+    let mut is_set = false;
+    for item in items {
+        if let Item::Value(ref value) = *item {
+            has_value = true;
+            if value.is_some() {
+                is_set = true;
+            }
+        }
+    }
+    (has_value, is_set)
+}
 
 
 pub struct Conf {
@@ -210,38 +243,66 @@ impl Conf {
             panic!("No values to display.");
         }
         let values = values_yaml.as_vec().unwrap();
-        let mut out: String = String::new();
-        // was there a previous value already displayed?
-        let mut prev_was_set = false;
-        // are we suppose to display a separator?
-        let mut separator_pending: Option<String> = None;
 
         // FIXME: all of this logic should live outside of this module
+        // first pass: figure out what every value renders into
+        let mut items: Vec<Item> = Vec::new();
         for v in values {
             let simple_value = SimpleValue::new(v);
-            let value_type = simple_value.value_type.as_str();
-            if value_type == "separator" {
+            if simple_value.value_type == "separator" {
                 let separator = Separator::new(v, &simple_value);
-                let separator_display = separator.display();
-                if separator.is_display_always() {
-                    out += &separator_display.unwrap();
-                } else {
-                    separator_pending = separator_display;
-                }
-            } else if let Some(s) = self.display_master.display_value(v, &simple_value) {
-                // add separator if it is needed
-                if let Some(separator) = separator_pending.clone() {
-                    if prev_was_set {
-                        // println!("add separator {:?}", simple_value);
-                        out += &separator;
-                        separator_pending = None;
-                    }
-                }
-                out += &s;
-                prev_was_set = true;
+                items.push(Item::Separator {
+                    text: separator.display().unwrap(),
+                    always: separator.is_display_always(),
+                });
+            } else {
+                items.push(Item::Value(self.display_master.display_value(v, &simple_value)));
             }
         }
-        out.clone()
+
+        // second pass: separators know now whether they are surrounded by values;
+        // out of a series of separators with no value in between only the last one is displayed
+        let mut display_it: Vec<bool> = vec!(false; items.len());
+        let mut pending_separator: Option<usize> = None;
+        for (idx, item) in items.iter().enumerate() {
+            let is_displayed = match *item {
+                Item::Value(ref value) => value.is_some(),
+                Item::Separator { always, .. } => {
+                    if !always {
+                        // a separator which comes later, still with no value in between,
+                        // replaces this one
+                        if is_surrounded(&items, idx) {
+                            pending_separator = Some(idx);
+                        }
+                        continue;
+                    }
+                    true
+                },
+            };
+            if !is_displayed {
+                continue;
+            }
+            display_it[idx] = true;
+            if let Some(p) = pending_separator.take() {
+                display_it[p] = true;
+            }
+        }
+        if let Some(p) = pending_separator {
+            display_it[p] = true;
+        }
+
+        let mut out: String = String::new();
+        for (idx, item) in items.iter().enumerate() {
+            if !display_it[idx] {
+                continue;
+            }
+            match *item {
+                Item::Value(Some(ref s)) => out += s,
+                Item::Value(None) => (),
+                Item::Separator { ref text, .. } => out += text,
+            }
+        }
+        out
     }
 }
 

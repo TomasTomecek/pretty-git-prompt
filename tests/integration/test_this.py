@@ -190,6 +190,38 @@ values:
       post_format: ''"""
     print(config)
     with SimpleRepo(tmpdir) as r:
+        assert r.run(custom_config_content=config) == "(master)"
+
+
+def test_surrounded_separator_in_the_middle(tmpdir):
+    config = """\
+---
+version: '1'
+values:
+    - type: remote_difference
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '<LOCAL_BRANCH>'
+          post_format: ''
+        - type: ahead
+          pre_format: '\u2191'
+          post_format: ''
+        - type: behind
+          pre_format: '\u2193'
+          post_format: ''
+    - type: separator
+      display: surrounded
+      pre_format: '|'
+      post_format: ''
+    - type: new
+      pre_format: '+'
+      post_format: ''"""
+    print(config)
+    with SimpleRepo(tmpdir) as r:
+        # there are no untracked files, hence the separator is not displayed
         assert r.run(custom_config_content=config) == "master"
 
 
