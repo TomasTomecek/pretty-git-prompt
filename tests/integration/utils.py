@@ -42,6 +42,9 @@ def push(remote, branch, with_tracking=True):
 def fetch():
     g(["fetch", "-a"])
 
+def fetch_remote(name):
+    g(["fetch", name])
+
 def reset_hard(ref):
     g(["reset", "--hard", ref, "--"])
 
@@ -159,6 +162,25 @@ class RWOAndUpstream(RepoWithOrigin):
         create_file("file.txt", "text5")
         add_file("file.txt")
         commit()
+
+
+class EmptyRepoWithFetchedUpstream(BareRepo):
+    """ no commits locally, upstream/master exists: no shared history """
+    def do(self):
+        super().do()
+        seed = self.tmpdir.mkdir("seed")
+        cwd = seed.chdir()
+        try:
+            init_repo()
+            create_file("file.txt", "text")
+            add_file("file.txt")
+            commit()
+            add_remote_upstream(str(self.upstream.realpath()))
+            push("upstream", "master", with_tracking=False)
+        finally:
+            os.chdir(str(cwd))
+        add_remote_upstream(str(self.upstream.realpath()))
+        fetch_remote("upstream")
 
 
 class RWOWithoutTracking(RepoWithOrigin):

@@ -326,9 +326,15 @@ impl Backend {
         match remote_branch {
             Some(b) => {
                 match self.repo.find_branch(&b.remote_branch, BranchType::Remote) {
-                    Ok(o) => Some(RefPair{ branch_name: b.remote_branch_name,
-                                           remote_name: b.remote_name,
-                                           oid: o.into_reference().target().unwrap() }),
+                    Ok(o) => match o.into_reference().target() {
+                        Some(oid) => Some(RefPair{ branch_name: b.remote_branch_name,
+                                                   remote_name: b.remote_name,
+                                                   oid }),
+                        None => {
+                            log!(self, "Can't get oid of remote branch {}", b.remote_branch);
+                            None
+                        }
+                    },
                     Err(e) => {
                         // don't panic here - it doesn't exist, we don't care
                         log!(self, "No remote branch found for {}: {:?}", b.remote_branch_name, e);
