@@ -27,15 +27,48 @@ struct Cache {
     file_statuses: RefCell<Option<HashMap<String, u32>>>
 }
 
+// canned repository state used to render a preview of the prompt without
+// touching a real repository
+#[derive(Debug, Clone)]
+pub struct DemoData {
+    pub repository_state: String,
+    pub branch_name: String,
+    pub tag: Option<String>,
+    // the branch has a remote counterpart
+    pub remote_name: Option<String>,
+    pub ahead: usize,
+    pub behind: usize,
+    pub file_statuses: HashMap<String, u32>,
+    pub stash_count: u16,
+}
+
+impl DemoData {
+    pub fn new(branch_name: &str) -> DemoData {
+        DemoData{
+            repository_state: String::new(),
+            branch_name: branch_name.to_string(),
+            tag: None,
+            remote_name: Some(String::from("origin")),
+            ahead: 0,
+            behind: 0,
+            file_statuses: HashMap::new(),
+            stash_count: 0,
+        }
+    }
+}
+
 pub struct Backend {
     cache: Cache,
-    pub repo: Repository,
+    // there is no repository when the prompt is rendered from demo data
+    repo: Option<Repository>,
+    demo: Option<DemoData>,
     pub debug: bool,
 }
 
 impl fmt::Debug for Backend {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Backend {{ cache: {:?}, repo: ?, debug: {:?} }}", self.cache, self.debug)
+        write!(f, "Backend {{ cache: {:?}, repo: ?, demo: {:?}, debug: {:?} }}",
+               self.cache, self.demo, self.debug)
     }
 }
 
@@ -103,15 +136,21 @@ impl Cache {
 
 impl Backend {
     pub fn new(repo: Repository, debug: bool) -> Backend {
-        Backend{ repo: repo, debug: debug, cache: Cache::new() }
+        Backend{ repo: Some(repo), demo: None, debug: debug, cache: Cache::new() }
+    }
+
+    // a backend which answers from canned data instead of a repository
+    pub fn new_demo(demo: DemoData, debug: bool) -> Backend {
+        Backend{ repo: None, demo: Some(demo), debug: debug, cache: Cache::new() }
     }
 
     fn get_head(&self) -> Option<Reference<'_>> {
-        match self.repo.head() {
+        let repo = self.repo.as_ref()?;
+        match repo.head() {
             Ok(head) => Some(head),
             Err(e2) => {
                 log!(self, "Can't get HEAD: {}", e2);
-                match self.repo.find_reference("HEAD") {
+                match repo.find_reference("HEAD") {
                     Ok(x) => {
                         log!(self, "Found HEAD directly: {:?}", x.name());
                         Some(x)
@@ -192,6 +231,9 @@ impl Backend {
     }
 
     pub fn get_current_branch_name(&self) -> Option<String> {
+        if let Some(ref demo) = self.demo {
+            return Some(demo.branch_name.clone());
+        }
         if self.cache.is_current_branch_set() {
             return self.cache.get_current_branch();
         }
@@ -210,11 +252,15 @@ impl Backend {
 
     // name of a tag which points exactly at HEAD (`git describe --tags --exact-match`)
     pub fn get_tag_name(&self) -> Option<String> {
+        if let Some(ref demo) = self.demo {
+            return demo.tag.clone();
+        }
+        let repo = self.repo.as_ref()?;
         let mut opts = DescribeOptions::new();
         opts.describe_tags();
         // only tags which point directly at HEAD
         opts.max_candidates_tags(0);
-        let description = match self.repo.describe(&opts) {
+        let description = match repo.describe(&opts) {
             Ok(d) => d,
             Err(e) => {
                 log!(self, "No tag found for HEAD: {:?}", e);
@@ -291,6 +337,9 @@ impl Backend {
     }
 
     pub fn get_branch_ahead_behind(&self, remote_branch: Option<RemoteBranch>) -> Option<BranchAheadBehind> {
+        if let Some(ref demo) = self.demo {
+            return Some(self.get_demo_ahead_behind(demo, remote_branch));
+        }
         let current_branch_name = self.get_current_branch_name();
         log!(self, "Current branch name = {:?}", current_branch_name);
         let mut ab = BranchAheadBehind::new(current_branch_name);
@@ -308,7 +357,8 @@ impl Backend {
             Some(r) => r,
             None => return None
         };
-        let res = self.repo.graph_ahead_behind(oid, ref_pair.oid);
+        let repo = self.repo.as_ref()?;
+        let res = repo.graph_ahead_behind(oid, ref_pair.oid);
         match res {
             Ok((a, b)) => {
                 ab.ahead = a;
@@ -321,12 +371,36 @@ impl Backend {
         Some(ab)
     }
 
+    fn get_demo_ahead_behind(&self, demo: &DemoData, remote_branch: Option<RemoteBranch>)
+            -> BranchAheadBehind {
+        let mut ab = BranchAheadBehind::new(Some(demo.branch_name.clone()));
+        match remote_branch {
+            // a remote branch requested in the config always exists in a demo
+            Some(b) => {
+                ab.remote_name = Some(b.remote_name);
+                ab.remote_branch_name = Some(b.remote_branch_name);
+            },
+            None => match demo.remote_name {
+                Some(ref name) => {
+                    ab.remote_name = Some(name.clone());
+                    ab.remote_branch_name = Some(demo.branch_name.clone());
+                },
+                // the branch is not tracking anything
+                None => return ab,
+            },
+        };
+        ab.ahead = demo.ahead;
+        ab.behind = demo.behind;
+        ab
+    }
+
     // find remote branch if branch_name is specified
     // if not, get remote tracking branch for current branch
     fn get_remote_branch(&self, remote_branch: Option<RemoteBranch>) -> Option<RefPair> {
+        let repo = self.repo.as_ref()?;
         match remote_branch {
             Some(b) => {
-                match self.repo.find_branch(&b.remote_branch, BranchType::Remote) {
+                match repo.find_branch(&b.remote_branch, BranchType::Remote) {
                     Ok(o) => match o.into_reference().target() {
                         Some(oid) => Some(RefPair{ branch_name: b.remote_branch_name,
                                                    remote_name: b.remote_name,
@@ -350,10 +424,11 @@ impl Backend {
     }
 
     pub fn get_status(&self) -> Option<Statuses<'_>> {
+        let repo = self.repo.as_ref()?;
         let mut so = StatusOptions::new();
         let mut opts = so.show(StatusShow::IndexAndWorkdir);
         opts.include_untracked(true);
-        match self.repo.statuses(Some(&mut opts)) {
+        match repo.statuses(Some(&mut opts)) {
             Ok(s) => Some(s),
             Err(e) => {
                 log!(self, "Unable to get status of repository: {:?}", e);
@@ -363,7 +438,14 @@ impl Backend {
     }
 
     pub fn get_repository_state(&self) -> String {
-        let state = self.repo.state();
+        if let Some(ref demo) = self.demo {
+            return demo.repository_state.clone();
+        }
+        let repo = match self.repo {
+            Some(ref r) => r,
+            None => return String::new(),
+        };
+        let state = repo.state();
         match state {
             RepositoryState::Clean => String::from(""),  // XXX: this seems to be hardcoded
             RepositoryState::Merge => String::from("merge"),
@@ -378,6 +460,9 @@ impl Backend {
     }
 
     pub fn get_file_status(&mut self) -> Option<HashMap<String, u32>> {
+        if let Some(ref demo) = self.demo {
+            return Some(demo.file_statuses.clone());
+        }
         if self.cache.is_file_statuses_set() {
             return self.cache.get_file_statuses();
         }
@@ -417,8 +502,15 @@ impl Backend {
     }
 
     pub fn get_stash_count(&mut self) -> u16 {
+        if let Some(ref demo) = self.demo {
+            return demo.stash_count;
+        }
+        let repo = match self.repo {
+            Some(ref mut r) => r,
+            None => return 0,
+        };
         let mut count: u16 = 0;
-        let r = self.repo.stash_foreach(
+        let r = repo.stash_foreach(
             |_u: usize, _s: &str, _o: &Oid| {
                 count += 1;
                 true

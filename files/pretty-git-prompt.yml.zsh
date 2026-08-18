@@ -18,6 +18,9 @@ values:
       # and bash:
       # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
       #
+      # 'pretty-git-prompt list-colors' prints the codes for all the colors and
+      # text styles, 'pretty-git-prompt preview --demo' renders this config
+      #
       # this is how the value is formatted in the end:
       #   [pre_format][value][post_format]
       pre_format: ''

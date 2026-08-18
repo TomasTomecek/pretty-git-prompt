@@ -351,3 +351,72 @@ values:
           post_format: ''"""
     with SimpleRepo(tmpdir) as r:
         assert r.run(custom_config_content=config) == "∅/master"
+
+
+ZSH_CONFIG = """\
+---
+version: '1'
+values:
+    - type: remote_difference
+      display_if_uptodate: true
+      pre_format: ''
+      post_format: ''
+      values:
+        - type: name
+          pre_format: '%{%F{blue}%}<LOCAL_BRANCH>'
+          post_format: '%{%f%}'
+        - type: ahead
+          pre_format: '↑'
+          post_format: ''
+        - type: behind
+          pre_format: '↓'
+          post_format: ''
+    - type: changed
+      pre_format: '%{%B%F{red}%}Δ'
+      post_format: '%{%b%f%}'"""
+
+
+def run_outside_repo(tmpdir, args):
+    return subprocess.check_output(
+        ["pretty-git-prompt"] + args, cwd=str(tmpdir)).decode("utf-8")
+
+
+def test_list_colors_works_outside_a_repository(tmpdir):
+    out = run_outside_repo(tmpdir, ["list-colors", "--shell", "zsh"])
+    assert "%{%F{blue}%}…%{%f%}" in out
+    assert "%{%B%}…%{%b%}" in out
+    # the color is also rendered, so that it can be seen in a terminal
+    assert "\x1b[38;5;4m" in out
+
+
+def test_list_colors_for_bash(tmpdir):
+    out = run_outside_repo(tmpdir, ["list-colors", "--shell", "bash"])
+    assert "\\[\\e[38;5;4m\\]…\\[\\e[0m\\]" in out
+    assert "%{%F{blue}%}" not in out
+
+
+def test_list_colors_no_color(tmpdir):
+    out = run_outside_repo(tmpdir, ["list-colors", "--no-color"])
+    assert "\x1b" not in out
+
+
+def test_preview_demo(tmpdir):
+    with SimpleRepo(tmpdir) as r:
+        out = r.run(custom_config_content=ZSH_CONFIG, args=["preview", "--demo"])
+    # prompt escapes are translated into terminal escape sequences
+    assert "\x1b[38;5;4mmaster\x1b[39m" in out
+    assert "%{" not in out
+    # every scenario is rendered, including ones the repository is not in
+    assert "\x1b[38;5;4mfeature\x1b[39m↑2↓1" in out
+
+
+def test_preview_in_a_repository(tmpdir):
+    with SimpleDirtyWithCommitRepo(tmpdir) as r:
+        out = r.run(custom_config_content=ZSH_CONFIG, args=["preview"])
+    assert out == "\x1b[38;5;4mmaster\x1b[39m\x1b[1m\x1b[38;5;1mΔ1\x1b[22m\x1b[39m"
+
+
+def test_preview_without_colors(tmpdir):
+    with SimpleDirtyWithCommitRepo(tmpdir) as r:
+        out = r.run(custom_config_content=ZSH_CONFIG, args=["preview", "--no-color"])
+    assert out == "masterΔ1"

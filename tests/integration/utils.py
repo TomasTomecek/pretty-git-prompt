@@ -112,9 +112,10 @@ class G():
     def prepare(self):
         raise NotImplemented()
 
-    def run(self, custom_config_content=None):
+    def run(self, custom_config_content=None, args=None):
         """
         custom_config_content: string
+        args: list of arguments to append, e.g. a subcommand
 
         run program, return output
         """
@@ -124,6 +125,8 @@ class G():
             with open(tmpdir_path, "w") as fd:
                 fd.write(custom_config_content)
             cmd += ["--config", tmpdir_path]
+        if args:
+            cmd += args
         return subprocess.check_output(cmd).decode("utf-8").rstrip()
 
 

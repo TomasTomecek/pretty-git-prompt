@@ -35,6 +35,9 @@ values:
       # and bash:
       # https://www.ibm.com/developerworks/linux/library/l-tip-prompt/
       #
+      # 'pretty-git-prompt list-colors' prints the codes for all the colors and
+      # text styles, 'pretty-git-prompt preview --demo' renders this config
+      #
       # this is how the value is formatted in the end:
       #   [pre_format][value][post_format]
       pre_format: ''
@@ -320,7 +323,12 @@ pub fn load_configuration_from_file<P: AsRef<Path>>(path: P) -> Result<String, i
 
 // main function to obtain Conf struct
 pub fn get_configuration(supplied_conf_path: Option<String>, display_master: DisplayMaster) -> Conf {
-    let content: String = if supplied_conf_path.is_some() {
+    Conf::new(get_configuration_yaml(supplied_conf_path), display_master)
+}
+
+// the config file as it is on disk; the default config when there is none
+pub fn get_configuration_content(supplied_conf_path: Option<String>) -> String {
+    if supplied_conf_path.is_some() {
         match load_configuration_from_file(supplied_conf_path.unwrap()) {
             Ok(c) => c,
             Err(e) => {
@@ -341,9 +349,13 @@ pub fn get_configuration(supplied_conf_path: Option<String>, display_master: Dis
                 }
             }
         }
-    };
-    let docs = YamlLoader::load_from_str(&content).unwrap();
-    Conf::new(docs[0].clone(), display_master)
+    }
+}
+
+// parsed config file, ready to be handed over to Conf
+pub fn get_configuration_yaml(supplied_conf_path: Option<String>) -> Yaml {
+    let docs = YamlLoader::load_from_str(&get_configuration_content(supplied_conf_path)).unwrap();
+    docs[0].clone()
 }
 
 // take default config and write it to path of default config location
