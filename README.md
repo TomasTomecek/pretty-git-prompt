@@ -1,5 +1,6 @@
 # pretty-git-prompt
 
+[![release](https://github.com/TomasTomecek/pretty-git-prompt/actions/workflows/release.yml/badge.svg)](https://github.com/TomasTomecek/pretty-git-prompt/actions/workflows/release.yml)
 [![crates.io](https://img.shields.io/crates/v/pretty-git-prompt.svg)](https://crates.io/crates/pretty-git-prompt)
 [![license](https://img.shields.io/crates/l/pretty-git-prompt.svg)](./LICENSE)
 
