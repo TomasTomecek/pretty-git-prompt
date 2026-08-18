@@ -19,7 +19,7 @@ yaml-rust = "0.4.5"
 [dependencies.clap]
 version = "4.*"
 default-features = false
-features = ["std", "cargo"]
+features = ["std", "cargo", "help", "usage", "error-context"]
 
 [dependencies.git2]
 version = "0.20"
