@@ -278,9 +278,11 @@ pub fn colors_wanted(no_color_flag: bool) -> bool {
 }
 
 struct Row {
-    // terminal escape sequence which formats the sample
-    sample_format: String,
+    // terminal escape sequence which formats the row
+    format: String,
     label: String,
+    // a block of color can't show bold or italic, the label has to carry those
+    label_carries_format: bool,
     // config snippet per shell, in the order shells were requested
     snippets: Vec<Option<String>>,
 }
@@ -307,12 +309,19 @@ fn write_table<W: Write>(out: &mut W, header_label: &str, shells: &[Shell], rows
     writeln!(out, "{}", header.trim_end())?;
 
     for row in rows {
-        let sample = if colors {
-            format!("{}{}{}", row.sample_format, SAMPLE, reset())
+        let format = if colors { row.format.clone() } else { String::new() };
+        let end = if colors { reset() } else { String::new() };
+        let (sample, label) = if row.label_carries_format {
+            // padding stays outside the formatting: underline and reverse would
+            // stretch over the trailing spaces otherwise
+            (" ".repeat(SAMPLE.chars().count()),
+             format!("{}{}{}{:width$}", format, row.label, end, "",
+                     width = label_width - row.label.chars().count()))
         } else {
-            String::from(SAMPLE)
+            (format!("{}{}{}", format, SAMPLE, end),
+             format!("{:width$}", row.label, width = label_width))
         };
-        let mut line = format!("  {}  {:width$}  ", sample, row.label, width = label_width);
+        let mut line = format!("  {}  {}  ", sample, label);
         for (idx, _) in shells.iter().enumerate() {
             let snippet = match row.snippets[idx] {
                 Some(ref s) => s.clone(),
@@ -332,8 +341,9 @@ fn color_rows(shells: &[Shell]) -> Vec<Row> {
             Some(format!("{}…{}", pre, post))
         }).collect();
         Row {
-            sample_format: fg(code),
+            format: fg(code),
             label: format!("{} ({})", name, code),
+            label_carries_format: false,
             snippets: snippets,
         }
     }).collect()
@@ -346,8 +356,9 @@ fn style_rows(shells: &[Shell]) -> Vec<Row> {
                 .map(|(pre, post)| format!("{}…{}", pre, post))
         }).collect();
         Row {
-            sample_format: sgr(&code.to_string()),
+            format: sgr(&code.to_string()),
             label: String::from(name),
+            label_carries_format: true,
             snippets: snippets,
         }
     }).collect()
@@ -499,6 +510,9 @@ mod tests {
         list_colors(&mut buf, &[Shell::Zsh], true).unwrap();
         let out = String::from_utf8(buf).unwrap();
         assert!(out.contains("\x1b[38;5;4m"));
+        // a block of color would look the same bold or not, so the label is styled
+        assert!(out.contains("\x1b[1mbold"));
+        assert!(out.contains("\x1b[3mitalic"));
         assert!(!out.contains("bash"));
     }
 }
