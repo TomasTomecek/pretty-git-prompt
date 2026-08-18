@@ -58,4 +58,4 @@ shell:
 
 release:
 	cargo build --target ${TARGET} --release
-	cp -av target/${TARGET}/release/${PROJECT_NAME} "${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}"
+	cp -av target/${TARGET}/release/${PROJECT_NAME} "${PROJECT_NAME}-${VERSION}-${TARGET}"

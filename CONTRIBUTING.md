@@ -218,7 +218,7 @@ crate is left alone.
 
 If you need a binary locally, that is still `make exec-release-build` or
 `PROJECT_NAME=pretty-git-prompt TARGET=x86_64-unknown-linux-gnu
-TRAVIS_TAG=0.2.3 make release`.
+VERSION=0.3.0 make release`.
 
 No crates.io API token is stored anywhere: the workflow uses [trusted
 publishing](https://crates.io/docs/trusted-publishing), i.e. it exchanges the
