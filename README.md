@@ -1,6 +1,8 @@
 # pretty-git-prompt
 
-[![Build Status](https://travis-ci.org/TomasTomecek/pretty-git-prompt.svg?branch=master)](https://travis-ci.org/TomasTomecek/pretty-git-prompt)
+[![release](https://github.com/TomasTomecek/pretty-git-prompt/actions/workflows/release.yml/badge.svg)](https://github.com/TomasTomecek/pretty-git-prompt/actions/workflows/release.yml)
+[![crates.io](https://img.shields.io/crates/v/pretty-git-prompt.svg)](https://crates.io/crates/pretty-git-prompt)
+[![license](https://img.shields.io/crates/l/pretty-git-prompt.svg)](./LICENSE)
 
 Your current git repository information inside a beautiful shell prompt.
 
@@ -10,27 +12,54 @@ Features:
 
  * You are able to display values such as:
    * git repository state (resolving `merge` conflict, interactive `rebase`, ...)
-   * Current branch name.
+   * Current branch name, or the commit hash when the `HEAD` is detached.
    * Name of a tag which points at the checked out commit.
    * Count of changed, newly-added, staged, conflicting files.
    * Number of items in stash.
- * You can track divergence against arbitrary branches.
+   * Divergence (ahead/behind) against the tracked branch or an arbitrary
+     remote branch.
  * Every value in output can be fully configured via a config file.
- * Sample configuration files feature colors.
+ * Sample configuration files feature colors, and `pretty-git-prompt
+   list-colors` and `pretty-git-prompt preview` let you pick and check them
+   without touching your shell config.
  * The tool supports `zsh` and `bash`.
  * pretty-git-prompt is written in Rust programming language and is delivered as a single, statically-linked binary.
 
 
+## Table of contents
+
+* [Development status](#development-status)
+* [How can I try this out?](#how-can-i-try-this-out)
+* [Installation](#installation)
+  * [Obtaining `pretty-git-prompt` binary](#obtaining-pretty-git-prompt-binary)
+    * [Fedora](#fedora)
+    * [crates.io](#cratesio)
+    * [GitHub release](#github-release)
+    * [Compile it yourself](#compile-it-yourself)
+  * [shell configuration](#shell-configuration)
+    * [zsh](#zsh-1)
+    * [bash](#bash-1)
+  * [Skipping selected repositories](#skipping-selected-repositories)
+* [Configuration](#configuration)
+  * [Where the config file lives](#where-the-config-file-lives)
+  * [Picking colors](#picking-colors)
+* [Command line interface](#command-line-interface)
+* [Solving problems](#solving-problems)
+* [Contributing](#contributing)
+* [Credits](#credits)
+
+
 ## Development status
 
-The tool is ready to use.
+The tool is ready to use. The latest release is
+[0.3.0](https://github.com/TomasTomecek/pretty-git-prompt/releases/latest).
 
 
 ## How can I try this out?
 
 Very easily! You don't need to install pretty-git-prompt if you just want to
-see it in action. There is a make target which launches docker container with
-whole environment set up.
+see it in action. There is a make target which launches a container with the
+whole environment set up (it needs `podman` and `make`).
 
 It just takes some time to prepare the environment (create build environment,
 compile the tool, run the demo).
@@ -79,21 +108,41 @@ information how to do that.
 ### Obtaining `pretty-git-prompt` binary
 
 
+#### Fedora
+
+pretty-git-prompt is packaged in Fedora:
+
+```
+$ sudo dnf install pretty-git-prompt
+```
+
+
+#### crates.io
+
+Every release is published to [crates.io](https://crates.io/crates/pretty-git-prompt),
+so if you have `cargo` available:
+
+```
+$ cargo install pretty-git-prompt
+```
+
+The binary lands in `~/.cargo/bin/`.
+
+
 #### GitHub release
 
-Get the binary via [latest GitHub release](https://github.com/TomasTomecek/pretty-git-prompt/releases/latest).
-
-For a linux distrubution:
-
-```
-$ curl -O https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.3.0/pretty-git-prompt-0.3.0-x86_64-unknown-linux-gnu
-```
-
-Or for MacOS:
+Every [GitHub release](https://github.com/TomasTomecek/pretty-git-prompt/releases/latest)
+has binaries attached for `x86_64-unknown-linux-gnu`, `x86_64-apple-darwin` and
+`aarch64-apple-darwin`, named `pretty-git-prompt-${VERSION}-${TARGET}`:
 
 ```
-$ curl -O https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.3.0/pretty-git-prompt-0.3.0-x86_64-apple-darwin
+$ curl -LO https://github.com/TomasTomecek/pretty-git-prompt/releases/download/0.3.0/pretty-git-prompt-0.3.0-x86_64-unknown-linux-gnu
+$ install -m 0755 pretty-git-prompt-0.3.0-x86_64-unknown-linux-gnu ~/.local/bin/pretty-git-prompt
 ```
+
+On an Apple silicon Mac the asset to fetch is
+`pretty-git-prompt-0.3.0-aarch64-apple-darwin`, on an Intel one
+`pretty-git-prompt-0.3.0-x86_64-apple-darwin`.
 
 
 #### Compile it yourself
@@ -126,7 +175,7 @@ Before digging into `.bashrc` and `.zshrc`, please make sure that binary
 
 ```
 $ pretty-git-prompt
-master|✚1Δ1
+master│✚1Δ1
 ```
 
 ### zsh
@@ -140,7 +189,7 @@ autoload -U colors
 colors
 # Allow for functions in the prompt.
 setopt PROMPT_SUBST
-RPROMPT='\$(pretty-git-prompt)'
+RPROMPT='$(pretty-git-prompt)'
 ```
 
 Just put it inside your `~/.zshrc` and try it out.
@@ -235,17 +284,6 @@ $ git config core.fsmonitor true
 ```
 
 
-## Solving problems
-
-If you encounter a problem, you may run the tool with verbose output to help you resolve the issue:
-
-```
-$ pretty-git-prompt --debug
-Debug messages are enabled.
-This is not a git repository: Error { code: -3, klass: 6, message: "could not find repository from \'.\'" }
-```
-
-
 ## Configuration
 
 The configuration is documented inside default config file. Therefore it's not
@@ -263,6 +301,43 @@ This repository contains also configuration for bash and zsh with colors:
 
 In case anything is not clear from the comments inside the config files, please
 open a new issue.
+
+These are the values you can put in the `values` list, every one of them
+formatted with your own `pre_format` and `post_format`:
+
+| `type` | Displays |
+| --- | --- |
+| `repository_state` | state of the repository when it is not clean: merge, rebase, cherry-pick, ... |
+| `remote_difference` | a remote branch and how far the local branch is ahead/behind it, with `name`, `ahead` and `behind` as nested `values` |
+| `tag` | name of a tag pointing exactly at the checked out commit |
+| `new` | number of untracked files |
+| `changed` | number of tracked files changed in the working tree |
+| `staged` | number of files added to the index |
+| `conflicts` | number of conflicting files |
+| `stash` | number of items in the stash |
+| `separator` | a delimiter, either `display: always` or `display: surrounded` (shown only when there is a value displayed on every side it has) |
+
+The branch name is part of `remote_difference`: its `name` value substitutes
+`<LOCAL_BRANCH>`, `<REMOTE>`, `<REMOTE_BRANCH>` and `<REMOTE_FIRST_LETTER>`
+(which falls back to `no_remote_placeholder`, `_` by default, when the branch
+has no remote counterpart). Omit `remote_branch` to follow the tracked branch,
+or set it to e.g. `upstream/master` to watch divergence against an arbitrary
+branch.
+
+
+### Where the config file lives
+
+The config is read from `$XDG_CONFIG_HOME/pretty-git-prompt.yml`, which is
+`~/.config/pretty-git-prompt.yml` unless you set `XDG_CONFIG_HOME` yourself.
+When the file is not there, the default config (the one
+`create-default-config` writes) is used, so the tool works before you configure
+anything.
+
+A config file elsewhere can be used with `--config`:
+
+```
+$ pretty-git-prompt --config ./my-prompt.yml
+```
 
 
 ### Picking colors
@@ -298,7 +373,7 @@ of a repository, or to see values you rarely hit:
 $ pretty-git-prompt preview --demo
   clean repository                     master
   new, changed and staged files        master│✚3Δ2▶1
-  diverged from the remote branch      feature↑2↓1
+  diverged from the remote branch      feature↑2↓1│upstream↑2↓1
   branch without a remote counterpart  feature
   tag pointing at HEAD                 master│#0.3.0
   conflict during a merge              merge│master│Δ1✖1
@@ -309,6 +384,37 @@ $ pretty-git-prompt preview --demo
 Both commands guess the shell from the config file, then from `$SHELL`; use
 `--shell bash` or `--shell zsh` to override it. `--no-color` (or the `NO_COLOR`
 environment variable) strips the formatting and prints the plain text.
+
+
+## Command line interface
+
+Run without arguments, the tool prints the prompt for the repository in the
+current working directory — this is the only thing your shell config needs.
+The rest is there to set it up and to debug it:
+
+| Command | What it does |
+| --- | --- |
+| `pretty-git-prompt` | print the prompt for the current repository, nothing when it is not a git repository |
+| `pretty-git-prompt --config FILE` | use `FILE` instead of the config in `$XDG_CONFIG_HOME` |
+| `pretty-git-prompt --debug` | print what the tool is doing while it renders the prompt |
+| `pretty-git-prompt create-default-config` | write the documented default config to `$XDG_CONFIG_HOME/pretty-git-prompt.yml` |
+| `pretty-git-prompt list-colors` | list colors and text styles with the codes to put in the config file |
+| `pretty-git-prompt preview` | render your config for the current repository |
+| `pretty-git-prompt preview --demo` | render your config for made up repository states |
+
+`list-colors` and `preview` accept `--shell bash|zsh` and `--no-color`,
+`preview` accepts `--config` as well.
+
+
+## Solving problems
+
+If you encounter a problem, you may run the tool with verbose output to help you resolve the issue:
+
+```
+$ pretty-git-prompt --debug
+Debug messages are enabled.
+This is not a git repository: Error { code: -3, klass: 6, message: "could not find repository from \'.\'" }
+```
 
 
 ## Contributing
@@ -325,7 +431,9 @@ all you need is `podman` and `make`.
 $ make test
 ```
 
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before you start hacking.
+[CONTRIBUTING.md](./CONTRIBUTING.md) describes the repository layout, both test
+suites, the CI (Fedora builds and tests via [packit](https://packit.dev/)) and
+how a release is made — please read it before you start hacking.
 
 
 ## Credits
