@@ -397,6 +397,7 @@ The rest is there to set it up and to debug it:
 | `pretty-git-prompt` | print the prompt for the current repository, nothing when it is not a git repository |
 | `pretty-git-prompt --config FILE` | use `FILE` instead of the config in `$XDG_CONFIG_HOME` |
 | `pretty-git-prompt --debug` | print what the tool is doing while it renders the prompt |
+| `pretty-git-prompt --help` | list the commands and options, `--help` of a subcommand describes just it |
 | `pretty-git-prompt create-default-config` | write the documented default config to `$XDG_CONFIG_HOME/pretty-git-prompt.yml` |
 | `pretty-git-prompt list-colors` | list colors and text styles with the codes to put in the config file |
 | `pretty-git-prompt preview` | render your config for the current repository |
